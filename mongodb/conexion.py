@@ -5,8 +5,7 @@ base = None
 
 def conecta():
     global cnx, base
-    #cnx =  MongoClient('mongodb://xmn:Mongolab!1@ds049467.mongolab.com:49467/xmn')
-    cnx =  MongoClient('mongodb://admin:V5e2Ir_KTNcf@127.3.69.129:27017/open')
+    cnx =  MongoClient('mongodb://USER:PASSWD@SERVER:PORT/DATABASE')
 
     base = cnx['open']
     assert len(base.collection_names()) >= 2
