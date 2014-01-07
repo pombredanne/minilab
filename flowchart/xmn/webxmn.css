@@ -1,0 +1,77 @@
+.flowchart-webxmn .window
+{
+  border:1px solid #346789;
+  box-shadow:2px 2px 19px #aaa;
+  -o-box-shadow:2px 2px 19px #aaa;
+  -webkit-box-shadow:2px 2px 19px #aaa;
+  -moz-box-shadow:2px 2px 19px #aaa;
+  -moz-border-radius:.5em;
+  border-radius:.5em;
+  opacity:0.8;
+  filter:alpha(opacity=80);
+  text-align:center;
+  z-index:20;
+  position:absolute;
+  background-color:#eeeeef;
+  color:#000;
+  font-family:helvetica;
+  padding:.5em;
+  font-size:.9em;
+}
+
+.flowchart-webxmn .window:hover
+{
+  box-shadow:2px 2px 19px #444;
+  -o-box-shadow:2px 2px 19px #444;
+  -webkit-box-shadow:2px 2px 19px #444;
+  -moz-box-shadow:2px 2px 19px #444;
+  opacity:0.6;
+  filter:alpha(opacity=60);
+}
+
+.flowchart-webxmn .active
+{
+  border:1px dotted green;
+}
+
+.flowchart-webxmn .hover
+{
+  border:1px dotted red;
+}
+
+.flowchart-webxmn ._jsPlumb_connector
+{
+  z-index:4;
+}
+
+.flowchart-webxmn ._jsPlumb_endpoint,.endpointTargetLabel,.endpointSourceLabel
+{
+  z-index:21;
+  cursor:pointer;
+}
+
+.flowchart-webxmn .aLabel
+{
+  background-color:#FFF;
+  padding:.4em;
+  font:12px sans-serif;
+  color:#444;
+  z-index:21;
+  border:1px dotted gray;
+  opacity:0.8;
+  filter:alpha(opacity=80);
+  cursor:pointer;
+}
+
+.flowchart-webxmn .aLabel._jsPlumb_hover
+{
+  background-color:#5C96BC;
+  color:#FFF;
+  border:1px solid #FFF;
+}
+
+._jsPlumb_overlay.endpointTargetLabel,
+._jsPlumb_overlay.endpointSourceLabel
+{
+  display:none!important;
+}

@@ -1,0 +1,24 @@
+{"box": [
+  {"id": "menu", "label": "Menu", "top":"172.8px", "left":"432px", "conn_out": ["LeftMiddle", "RightMiddle", "BottomCenter", "BottomLeft", "BottomRight",  "TopCenter", "TopLeft", "TopRight"], "conn_in": []},
+  {"id": "home", "label": "Home", "top":"172.8px", "left":"12em", "conn_out": ["BottomLeft", "BottomRight", "TopLeft", "TopRight"], "conn_in": ["LeftMiddle", "TopCenter", "RightMiddle", "BottomCenter"]},
+  {"id": "form1", "label": "Form 1", "top":"28em", "left":"35em", "conn_out": ["BottomLeft", "BottomRight", "TopLeft", "TopRight"], "conn_in": ["LeftMiddle", "TopCenter", "RightMiddle", "BottomCenter"]},
+  {"id": "list1", "label": "List 1", "top":"13em", "left":"55em", "conn_out": ["BottomLeft", "BottomRight", "TopLeft", "TopRight"], "conn_in": ["LeftMiddle", "TopCenter", "RightMiddle", "BottomCenter"]},
+  {"id": "form2", "label": "Form 2", "top":"27em", "left":"48em", "conn_out": ["BottomLeft", "BottomRight", "TopLeft", "TopRight"], "conn_in": ["LeftMiddle", "TopCenter", "RightMiddle", "BottomCenter"]},
+  {"id": "list2", "label": "List 2", "top":"34em", "left":"5em", "conn_out": ["BottomLeft", "BottomRight", "TopLeft", "TopRight"], "conn_in": ["LeftMiddle", "TopCenter", "RightMiddle", "BottomCenter"]}
+], "connection": [
+  {"title": "openHome",
+   "chain": ["menu", "home"],
+   "connector": ["LeftMiddle",   "RightMiddle"]},
+  {"title": "openList1",
+   "chain": ["menu", "list1"],
+   "connector": ["TopRight", "TopCenter"]},
+  {"title": "openForm1",
+   "chain": ["menu", "form1"],
+   "connector": ["BottomRight", "TopCenter"]},
+  {"title": "openForm2",
+   "chain": ["menu", "form2"],
+   "connector": ["RightMiddle", "TopCenter"]},
+  {"title": "openList2",
+   "chain": ["menu", "list2"],
+   "connector": ["BottomCenter", "TopCenter"]}
+]}
