@@ -78,7 +78,7 @@ class AcquisitionFiniteTask():
         return data
 
     def plot(self, data):
-        plt.axis([0, self.samples_per_channel-1, -2, 5.5])
+        plt.axis([0, self.samples_per_channel-1, -11, 11])
 
         for line in data:
             #plt.plot(data['Dev2/ai3'])

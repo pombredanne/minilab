@@ -19,45 +19,15 @@ from mswim import settings
 from mswim.libs.db import conn
 
 
-class WimTask():
+class WimTask(object):
     """
 
     """
-
-    digital_task = None
-    analogic_task = None
-    channel = None
-    read = None
-    bytes_per_samp = None
-    samples_per_channel = None
-
-    def __init__(self):
+    @classmethod
+    def ready(cls, device, time_to_acquire=3):
         """
 
-        @return:
         """
-        self.configure()
-
-    def configure(self):
-        """
-
-        @return:
-        """
-
-        self.digital_task = TaskHandle()
-
-
-        self.channel = "Dev2/port0/line0"
-
-        self.read = int32()
-        self.bytes_per_samp = int32()
-        self.samples_per_channel = 1
-
-        self.dev1 = ['Dev1/ai%s' % line for line in range(0, 4)]
-        self.dev2 = ['Dev2/ai%s' % line for line in range(0, 4)]
-
-
-    def ready(self, device, time_to_acquire=3):
         raw_input('Press ENTER to acquire data.')
 
         #print('\rON ', end='')
@@ -97,13 +67,12 @@ class WimTask():
 def main():
     print('Starting ...')
     conn.Pool.connect()
-    task = WimTask()
 
-    device = settings.DEVICES[sys.argv[1]]
+    device = settings.DEVICES['ceramic']
 
     while True:
         try:
-            task.ready(device, time_to_acquire=9)
+            WimTask.ready(device, time_to_acquire=9)
         except KeyboardInterrupt:
             print('KeyboardInterrupt')
             break

@@ -45,7 +45,7 @@ def get_acquisition_data(data, device, time_to_acquire=3):
 
         sensors = defaultdict(dict)
         for chan_i, chan_data in data.items():
-            i_sensor = str(chans[chan_i])
+            i_sensor = chans[chan_i]
             for t, sensor_voltage in enumerate(chan_data):
                 # changed to return use the same baseline
                 sensor_time = acq_time[t]
