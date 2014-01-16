@@ -80,11 +80,9 @@ class AcquisitionFiniteTask():
     def plot(self, data):
         plt.axis([0, self.samples_per_channel-1, -2, 5.5])
 
-        plt.plot(data['Dev2/ai0'])
-        plt.plot(data['Dev2/ai1'])
-        plt.plot(data['Dev2/ai2'])
-        plt.plot(data['Dev2/ai3'])
+        for line in data:
+            #plt.plot(data['Dev2/ai3'])
+            plt.plot(data[line])
 
         plt.grid()
         plt.show()
-

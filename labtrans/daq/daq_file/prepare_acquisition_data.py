@@ -10,7 +10,7 @@ from copy import deepcopy
 import numpy as np
 
 # mswim module path
-sys.path.insert(0, '/var/www/mswim/')
+sys.path.insert(0, 'c:/mswim/')
 
 # mswim packages
 from mswim.apps.acquisition.models import AcquisitionModel
@@ -27,7 +27,7 @@ def calc_time(delta_t, N):
     return [next_time(timestamp) for _ in range(N)]
 
 
-def get_acquisition_data(data, device):
+def get_acquisition_data(data, device, time_to_acquire=3):
     """
 
     """
@@ -38,7 +38,10 @@ def get_acquisition_data(data, device):
             'channels': len(chans)
         }
 
-        acq_time = calc_time(timedelta(seconds=1/5000), 10000)
+        acq_time = calc_time(
+            timedelta(seconds=1/device['rate']),
+            device['rate'] * time_to_acquire
+        )
 
         sensors = defaultdict(dict)
         for chan_i, chan_data in data.items():
@@ -50,7 +53,7 @@ def get_acquisition_data(data, device):
                 if not sensors[i_sensor]:
                     sensors[i_sensor] = defaultdict(dict)
                 sensors[i_sensor][sensor_time] = sensor_voltage
-                print(sensor_voltage)
+                #print(sensor_voltage)
 
         return AcquisitionModel(
             header, sensors, sensor_type=2
