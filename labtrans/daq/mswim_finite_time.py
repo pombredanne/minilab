@@ -19,13 +19,13 @@ class AcquisitionFiniteTask():
 
     """
 
-    def __init__(self, physical_channel=[], rate=1.0, minv=-5.0, maxv=5.0):
+    def __init__(self, physical_channel=[], rate=1.0, minv=-5.0, maxv=5.0, time_to_acquire=2):
         """
 
         """
         self.task = TaskHandle()
         self.physical_channel = physical_channel
-        self.time_to_acquire = 2
+        self.time_to_acquire = time_to_acquire
         self.rate = rate
         self.samples_per_channel = int(self.rate * self.time_to_acquire)
         self.number_of_channels = len(physical_channel)
@@ -90,11 +90,12 @@ class AcquisitionFiniteTask():
 
 
 def test():
-    dev1 = ['Dev1/ai%s' % line for line in range(0, 4)]
+    #dev1 = ['Dev1/ai%s' % line for line in range(0, 4)]
     dev2 = ['Dev2/ai%s' % line for line in range(0, 4)]
 
     task_dev = AcquisitionFiniteTask(
-        physical_channel=dev2, rate=5000., minv=-5.0, maxv=5.0
+        physical_channel=dev2, rate=5000., minv=-5.0, maxv=5.0,
+        time_to_acquire=9
     )
 
     data = task_dev.read()
