@@ -64,11 +64,11 @@ class WimTask(object):
         print('OFF')
 
 
-def main():
+def main(dev):
     print('Starting ...')
     conn.Pool.connect()
 
-    device = settings.DEVICES['ceramic']
+    device = settings.DEVICES[dev]
 
     while True:
         try:
@@ -82,4 +82,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1])
