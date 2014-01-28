@@ -73,21 +73,26 @@ class DaqHandler(asyncore.dispatcher_with_send):
             self.send(str(self.daq.read()) + '\n')
 
 
-class DaqServer(asyncore.dispatcher):
+class DaqRegister(asyncore.dispatcher):
+    """
 
-    def __init__(self, host, port):
+    """
+    device = ''
+
+    def __init__(self, device):
         asyncore.dispatcher.__init__(self)
         self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.set_reuse_addr()
-        self.bind((host, port))
-        self.listen(5)
+        self.device = device
+        self.status = True
+        self.daq = DAQ_ACQUISTION
 
-    def handle_accept(self):
-        pair = self.accept()
-        if pair is not None:
-            sock, address = pair
-            print 'Incoming connection from %s' % repr(address)
-            handler = DaqHandler(sock, address)
+    def readable(self):
+        return self.status
+
+    def handle_read(self):
+        self.status = False
+
+        self.status = True
 
 server = DaqServer('localhost', 65000)
 asyncore.loop()

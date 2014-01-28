@@ -12,7 +12,6 @@ the buffer, you will receive an error.
 
 """
 from __future__ import print_function
-from reportlab.platypus.paraparser import _num
 from matplotlib import pyplot as plt
 from matplotlib.ticker import EngFormatter
 from collections import defaultdict
@@ -21,21 +20,12 @@ from time import sleep
 import numpy as np
 import time as time
 import sys
-import platform
-
-# internal
-if platform.system() == 'Linux':
-    sys.path.append('/var/www/mswim/')
-else:
-    sys.path.append('c:/mswim/')
-
-from mswim import settings
 
 sys.path.append('../../')
 from database.psql.db import DB
 
 
-def simulate_daq(sampling_per_channel=15000):
+def simulate_daq(settings, sampling_per_channel=15000):
     """
 
     """
@@ -102,8 +92,17 @@ def simulate_daq(sampling_per_channel=15000):
 
 
 if __name__ == '__main__':
+    import platform
+
+    if platform.system() == 'Linux':
+        sys.path.append('/var/www/mswim/')
+    else:
+        sys.path.append('c:/mswim/')
+
+    from mswim import settings
+
     channels = ['Dev1/ao0', 'Dev1/ao1', 'Dev1/ao2', 'Dev1/ao3']
-    s = simulate_daq()
+    s = simulate_daq(settings)
     s.next()
     s.send(channels)
     print(s.next())
