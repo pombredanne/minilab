@@ -32,10 +32,9 @@ class AcquisitionFiniteTask():
 
         """
         self.physicalChannel = physicalChannel
-
         self.numberOfChannel = physicalChannel.__len__()
-
         self.samplesPerChannel = 1
+        self.rate = rate
 
         self.limit = dict(
             [(name, (minv, maxv)) for name in self.physicalChannel]
@@ -63,7 +62,7 @@ class AcquisitionFiniteTask():
                 DAQmx_Val_Volts, None
             )
             DAQmxCfgSampClkTiming(
-                'OnboardClock', rate, DAQmx_Val_Rising,
+                taskHandles[name], '', self.rate, DAQmx_Val_Rising,
                 DAQmx_Val_ContSamps, self.samplesPerChannel
             )
         self.taskHandles = taskHandles

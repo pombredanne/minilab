@@ -4,19 +4,12 @@ Created on Tue Oct  8 16:11:48 2013
 
 @author: ivan
 """
-from __future__ import print_function, division
+from __future__ import print_function
 from PyDAQmx import *
 from PyDAQmx.DAQmxFunctions import *
 from PyDAQmx.DAQmxConstants import *
-from matplotlib import pyplot as plt
-from collections import defaultdict
-from datetime import datetime, timedelta
 
 import numpy as np
-import random
-
-
-from mswim.apps.acquisition.models import AcquisitionModel
 
 
 class AnalogContinuousTask():
@@ -48,14 +41,15 @@ class AnalogContinuousTask():
         self.physical_channel = physical_channel
         self.seconds_to_acquire = seconds_to_acquire
         self.rate = rate
-        self.samples_per_channel = int(self.rate * self.seconds_to_acquire)
+
+        self.samples_per_channel = int(self.rate * 1)  # 1 second sampled
         self.number_of_channels = len(physical_channel)
         self.buffer_size = self.samples_per_channel * self.number_of_channels
 
         self.minv = minv
         self.maxv = maxv
 
-        DAQmxCreateTask('AcquisitionFiniteTask', byref(self.task))
+        DAQmxCreateTask('', byref(self.task))
 
         DAQmxCreateAIVoltageChan(
             self.task,
@@ -78,6 +72,8 @@ class AnalogContinuousTask():
             self.samples_per_channel
         )
 
+        DAQmxStartTask(self.task)
+
 
     def read(self):
         """
@@ -89,18 +85,15 @@ class AnalogContinuousTask():
             (name, data[i * self.samples_per_channel:
                         (i + 1) * self.samples_per_channel])
             for i, name in enumerate(self.physical_channel)
-        ]), calc_time(timedelta(1 / self.rate), self.samples_per_channel)
-
+        ])
 
     def _read(self):
-        DAQmxStartTask(self.task)
-        data = np.zeros(
-            self.buffer_size,
-            dtype=np.float64
-        )
+        """
 
-        # data = AI_data_type()
+        """
+        data = np.zeros((self.buffer_size,), dtype=numpy.float64)
         read = int32()
+
         DAQmxReadAnalogF64(
             self.task,
             self.samples_per_channel,
@@ -112,18 +105,29 @@ class AnalogContinuousTask():
             None
         )
 
-        # DAQmxWaitUntilTaskDone(self.task, 10.0)  # only for FiniteSamps mode
-        DAQmxStopTask(self.task)
-        # DAQmxClearTask(self.task)
-
         return data
 
+    def close(self):
+        print('')
+        print('Clearing ...')
+        try:
+            DAQmxStopTask(self.task)
+            print('\nTask stopped')
+        except:
+            pass
+
+        try:
+            DAQmxClearTask(self.task)
+            print('Quit')
+        except:
+            pass
+        return
 
 class DigitalContinuousTask(object):
     """
 
     """
-    digital_task = None
+    task = None
     channels = None
     read_int32 = None
     bytes_per_samp_int32 = None
@@ -134,7 +138,7 @@ class DigitalContinuousTask(object):
         channels,
         samples_per_channel
     ):
-        self.digital_task = TaskHandle()
+        self.task = TaskHandle()
         self.channels = channels
         self.samples_per_channel = samples_per_channel
         self.read_int32 = int32()
@@ -146,18 +150,18 @@ class DigitalContinuousTask(object):
         """
         data = numpy.zeros((self.samples_per_channel,), dtype=numpy.uint8)
 
-        DAQmxCreateTask("", byref(self.digital_task))
+        DAQmxCreateTask("", byref(self.task))
         DAQmxCreateDIChan(
-            self.digital_task,
+            self.task,
             ','.join(self.channels),
             '',
             DAQmx_Val_ChanPerLine
         )
 
-        DAQmxStartTask(self.digital_task)
+        DAQmxStartTask(self.task)
 
         DAQmxReadDigitalLines(
-            self.digital_task,
+            self.task,
             self.samples_per_channel,
             10.0,
             DAQmx_Val_GroupByChannel,
@@ -168,12 +172,9 @@ class DigitalContinuousTask(object):
             None
         )
 
-        DAQmxStopTask(self.digital_task)
-        DAQmxClearTask(self.digital_task)
-
         return data
 
-    def clear(self):
+    def close(self):
         """
 
         @return:
@@ -182,13 +183,13 @@ class DigitalContinuousTask(object):
         print('')
         print('Clearing ...')
         try:
-            DAQmxStopTask(self.digital_task)
+            DAQmxStopTask(self.task)
             print('\nTask stopped')
         except:
             pass
 
         try:
-            DAQmxClearTask(self.digital_task)
+            DAQmxClearTask(self.task)
             print('Quit')
         except:
             pass
