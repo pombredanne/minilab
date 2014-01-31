@@ -46,12 +46,12 @@ class AcquisitionTask():
             raise Exception('Invalid Acquisition Mode.')
 
         self.digital_task = DIGITAL_TASK(
-            channels=device['digital'],
-            samples_per_channel=device['rate']
+            physical_channels=device['digital'],
+            rate=device['rate']
         )
 
         self.analog_task = ANALOG_TASK(
-            physical_channel=device['analog'],
+            physical_channels=device['analog'],
             rate=device['rate'],
             minv=device['minv'],
             maxv=device['maxv'],
@@ -68,26 +68,26 @@ class AcquisitionTask():
 
         sensors = defaultdict(dict)
         for chan_i, chan_data in data.items():
-            i_sensor = self.analog_task.physical_channel.index(chan_i)
             for i, sensor_voltage in enumerate(chan_data):
                 # changed to return use the same baseline
-                if not sensors[i_sensor]:
-                    sensors[i_sensor] = list()
-                sensors[i_sensor] += [sensor_voltage]
+                if not sensors[chan_i]:
+                    sensors[chan_i] = []
+                sensors[chan_i] += [sensor_voltage]
         return sensors
 
     def read_digital(self):
-        return {}
+        if not self.digital_task.physical_channels:
+            return {}
+
         data = self.digital_task.read()
 
         sensors = defaultdict(dict)
         for chan_i, chan_data in data.items():
-            i_sensor = self.channel.index(chan_i)
             for i, sensor_voltage in enumerate(chan_data):
                 # changed to return use the same baseline
-                if not sensors[i_sensor]:
-                    sensors[i_sensor] = defaultdict(list)
-                sensors[i_sensor].append( sensor_voltage)
+                if not sensors[chan_i]:
+                    sensors[chan_i] = []
+                sensors[chan_i] += [sensor_voltage]
         return sensors
 
     def close(self):
@@ -115,9 +115,23 @@ if __name__ == '__main__':
 
     from mswim.settings import DEVICES
 
-    task = AcquisitionTask(extract_devices(DEVICES)['Dev5'], 'continuous')
-    while True:
-        print(task.read())
-        sleep(10)
-        task.close()
-        break
+    def test1():
+        channels = extract_devices(DEVICES)['Dev5']
+        channels = channels['analog'] + channels['digital']
+        task = AcquisitionTask(extract_devices(DEVICES)['Dev5'], 'continuous')
+        while True:
+            data = task.read()
+            for channel in data:
+                print('%s: %s' % (channel, len(data[channel])))
+
+    def test2():
+        device = extract_devices(DEVICES)['Dev5']
+        digital_task = DigitalContinuousTask(
+            physical_channels=device['digital'],
+            rate=device['rate']
+        )
+
+        while True:
+            print(digital_task.read())
+
+    test1()

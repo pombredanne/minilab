@@ -6,27 +6,57 @@ from __future__ import print_function
 from collections import defaultdict
 
 
-class DaqRingBuffer(object):
+class DaqPkgRingBuffer(object):
     """ class that implements a not-yet-full buffer """
-    max = 5
-    data = []
+    max_limit_package = 5
+    data = defaultdict(dict)
     nothing = None
     number_of_lines = 0
 
     @classmethod
-    def limit_max(cls, number_of_lines, max_rows):
-        cls.max = max
-        cls.number_of_lines = number_of_lines
-        cls.data = [[cls.nothing] * max_rows] * number_of_lines
+    def bind(cls, name, channels):
+        """
+
+        """
+        for channel in channels:
+            cls.data[channel][name] = []
 
     @classmethod
-    def nothing_value(cls, nothing):
-        cls.nothing = nothing
+    def configure(cls, max_limit_package, nothing_value):
+        """
+
+        """
+        cls.max_limit_package = max_limit_package
+        cls.nothing = nothing_value
 
     @classmethod
     def append(cls, new_data):
-        for key, col_data in enumerate(cls.data):
-            cls.data[key] = cls.data[key][len(new_data[key]):] + new_data[key]
+        """
+
+        """
+        for channel in new_data:
+            for buffer_name in cls.data[channel]:
+                if (
+                    len(cls.data[channel][buffer_name]) >=
+                        cls.max_limit_package
+                ):
+                    cls.data[channel][buffer_name].pop(0)
+                cls.data[channel][buffer_name].append(new_data[channel])
+
+    @classmethod
+    def extract_data(cls, buffer_name):
+        result = {}
+
+        for channel in cls.data:
+            if (
+                not buffer_name in cls.data[channel]
+                or not cls.data[channel][buffer_name]
+            ):
+                continue
+
+            result[channel] = cls.data[channel][buffer_name].pop(0)
+
+        return result if result else None
 
     @classmethod
     def tolist(cls):
@@ -36,33 +66,34 @@ class DaqRingBuffer(object):
 
 class DaqDictRingBuffer(object):
     """ class that implements a not-yet-full buffer """
-    max_lines = 1000
-    data = defaultdict(list)
+    max_samples_per_channel = 1000
+    data = defaultdict(dict)
     nothing = None
-    number_of_cols = 0
+    channels = {}
 
     @classmethod
-    def configure(cls, ordered_keys, max_lines):
-        """ Return a list of elements from the oldest to the newest. """
-        cls.max_lines = max_lines
-        cls.number_of_cols = len(ordered_keys)
+    def bind(cls, buffer_name, channels):
+        """
 
-        for device in ordered_keys:
-            for key in ordered_keys[device]:
-                cls.data[key] = [cls.nothing] * max_lines
-
-    @classmethod
-    def nothing_value(cls, nothing):
-        """ Return a list of elements from the oldest to the newest. """
-        cls.nothing = nothing
-
-    @classmethod
-    def append(cls, new_data):
-        """ Append an element overwriting the oldest one. """
-        for position, key in enumerate(cls.data):
-            cls.data[key] = (
-                cls.data[key][len(new_data[key]):] + new_data[key]
+        """
+        cls.channels[buffer_name] = channels
+        for channel in channels:
+            cls.data[buffer_name][channel] = (
+                [cls.nothing] * cls.max_samples_per_channel
             )
+
+    @classmethod
+    def configure(cls, max_samples_per_channel, nothing_value=0):
+        """ Return a list of elements from the oldest to the newest. """
+        cls.max_samples_per_channel = max_samples_per_channel
+        cls.nothing = nothing_value
+
+    @classmethod
+    def append(cls, buffer_name, new_data):
+        """ Append an element overwriting the oldest one. """
+        for channel in cls.channels[buffer_name]:
+            del cls.data[buffer_name][channel][:len(new_data[channel])]
+            cls.data[buffer_name][channel] += new_data[channel]
 
     @classmethod
     def extract(cls, start_position, end_position):
@@ -85,8 +116,8 @@ class DaqDictRingBuffer(object):
         """ return list of elements in correct order. """
         return cls.data
 
-# sample usage
-if __name__ == '__main__':
+
+def test1():
     from random import random
 
     channels = [
@@ -130,3 +161,48 @@ if __name__ == '__main__':
 
     x.append(devices)
     print(x.__class__, x.tolist())
+
+
+def test2():
+    # internal
+    import sys
+    import platform
+
+    if platform.system() == 'Linux':
+        sys.path.append('/var/www/mswim/')
+    else:
+        sys.path.append('c:/mswim/')
+
+    from mswim.settings import DEVICES as SENSORS_GROUP
+    from util import extract_devices, extract_channels
+
+    devices = extract_devices(SENSORS_GROUP)
+    channels = extract_channels(SENSORS_GROUP)
+
+    DaqPkgRingBuffer.configure(10, 0.0)
+
+    x = DaqPkgRingBuffer
+    x.configure(7, 0.0)
+
+    for name in channels:
+        x.bind(name, channels[name])
+
+    x.append({'Dev4/ai30': [1, 2, 3, 4, 5], 'Dev4/ai31': [6, 7, 8, 9, 0]})
+    print(x.tolist())
+
+    data = x.extract_data('ceramic')
+    print('extracted data:')
+    print(data)
+
+    data = x.extract_data('ceramic')
+    print('extracted data:')
+    print(data)
+
+    x.append({'Dev5/ai1': [1, 2, 3, 4, 5], 'Dev5/ai2': [6, 7, 8, 9, 0]})
+    data = x.extract_data('ceramic')
+    print('extracted data:')
+    print(data)
+
+
+if __name__ == '__main__':
+    test2()

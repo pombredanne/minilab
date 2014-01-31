@@ -17,7 +17,7 @@ class AnalogContinuousTask():
 
     """
     task = None
-    physical_channel = None
+    physical_channels = None
     seconds_to_acquire = None
     rate = None
     samples_per_channel = None
@@ -28,7 +28,7 @@ class AnalogContinuousTask():
 
     def __init__(
         self,
-        physical_channel=[],
+        physical_channels=[],
         rate=1.0,
         minv=(-5.0),
         maxv=5.0,
@@ -38,12 +38,12 @@ class AnalogContinuousTask():
 
         """
         self.task = TaskHandle()
-        self.physical_channel = physical_channel
+        self.physical_channels = physical_channels
         self.seconds_to_acquire = seconds_to_acquire
         self.rate = rate
 
-        self.samples_per_channel = int(self.rate * 1)  # 1 second sampled
-        self.number_of_channels = len(physical_channel)
+        self.samples_per_channel = int(self.rate * 1)  # 2 second sampled
+        self.number_of_channels = len(physical_channels)
         self.buffer_size = self.samples_per_channel * self.number_of_channels
 
         self.minv = minv
@@ -53,7 +53,7 @@ class AnalogContinuousTask():
 
         DAQmxCreateAIVoltageChan(
             self.task,
-            ','.join(self.physical_channel),
+            ','.join(self.physical_channels),
             '',
             DAQmx_Val_RSE,
             self.minv,
@@ -69,7 +69,7 @@ class AnalogContinuousTask():
             self.rate,
             DAQmx_Val_Rising,
             DAQmx_Val_ContSamps,
-            self.samples_per_channel
+            self.buffer_size * 10
         )
 
         DAQmxStartTask(self.task)
@@ -84,7 +84,7 @@ class AnalogContinuousTask():
         return dict([
             (name, data[i * self.samples_per_channel:
                         (i + 1) * self.samples_per_channel])
-            for i, name in enumerate(self.physical_channel)
+            for i, name in enumerate(self.physical_channels)
         ])
 
     def _read(self):
@@ -123,40 +123,71 @@ class AnalogContinuousTask():
             pass
         return
 
+
 class DigitalContinuousTask(object):
     """
 
     """
     task = None
-    channels = None
+    physical_channels = None
     read_int32 = None
     bytes_per_samp_int32 = None
     samples_per_channel = None
 
     def __init__(
         self,
-        channels,
-        samples_per_channel
+        physical_channels,
+        rate
     ):
         self.task = TaskHandle()
-        self.channels = channels
-        self.samples_per_channel = samples_per_channel
-        self.read_int32 = int32()
-        self.bytes_per_samp_int32 = int32()
+        self.physical_channels = physical_channels
+        self.rate = rate
+        self.samples_per_channel = int(self.rate * 1)  # 2 second sampled
+        self.buffer = self.samples_per_channel * len(physical_channels)
+
+        if physical_channels:
+            DAQmxCreateTask("", byref(self.task))
+            DAQmxCreateDIChan(
+                self.task,
+                ','.join(self.physical_channels),
+                '',
+                DAQmx_Val_ChanPerLine
+            )
+
+            """
+            DAQmxCfgSampClkTiming(
+                self.task,
+                '',
+                self.rate,
+                DAQmx_Val_Rising,
+                DAQmx_Val_FiniteSamps,
+                self.buffer * 10
+            )
+            """
 
     def read(self):
+        """
+        @return: data acquisitions, time of each acquisition
+        """
+        if not self.physical_channels:
+            return {}
+
+        data = self._read()
+
+        result = dict([
+            (name, data[i * self.samples_per_channel:
+                        (i + 1) * self.samples_per_channel])
+            for i, name in enumerate(self.physical_channels)
+        ])
+        return result
+
+    def _read(self):
         """
 
         """
         data = numpy.zeros((self.samples_per_channel,), dtype=numpy.uint8)
-
-        DAQmxCreateTask("", byref(self.task))
-        DAQmxCreateDIChan(
-            self.task,
-            ','.join(self.channels),
-            '',
-            DAQmx_Val_ChanPerLine
-        )
+        samps_per_chan_read_i = int32()
+        bytes_per_samp_i = int32()
 
         DAQmxStartTask(self.task)
 
@@ -166,11 +197,13 @@ class DigitalContinuousTask(object):
             10.0,
             DAQmx_Val_GroupByChannel,
             data,
-            self.samples_per_channel * 2,
-            byref(self.read_int32),
-            byref(self.bytes_per_samp_int32),
+            self.samples_per_channel,
+            byref(samps_per_chan_read_i),
+            byref(bytes_per_samp_i),
             None
         )
+
+        DAQmxStopTask(self.task)
 
         return data
 
@@ -180,19 +213,43 @@ class DigitalContinuousTask(object):
         @return:
 
         """
-        print('')
-        print('Clearing ...')
+        if not self.physical_channels:
+            return
+
+        print('\nStopping ... ', end='')
         try:
             DAQmxStopTask(self.task)
-            print('\nTask stopped')
         except:
             pass
 
         try:
             DAQmxClearTask(self.task)
-            print('Quit')
         except:
             pass
+
+        print('OK. Quit.')
         return
 
 
+if __name__ == '__main__':
+    import sys
+    import platform
+
+    # internal
+    sys.path.append('../../')
+    from arch.socket_arch.util import extract_devices
+
+    if platform.system() == 'Linux':
+        sys.path.append('/var/www/mswim/')
+    else:
+        sys.path.append('c:/mswim/')
+
+    from mswim.settings import DEVICES
+
+    device = extract_devices(DEVICES)['Dev5']
+    digital_task = DigitalContinuousTask(
+        physical_channels=device['digital'],
+        rate=device['rate']
+    )
+
+    print(digital_task.read())
