@@ -52,7 +52,8 @@ class WimTask(object):
         acq = get_acquisition_data(data, device, time_to_acquire)
         save_file(
             acq, 'c:/tmp/wim_raw_data_%s.txt' %
-                 (str(datetime.now())[:19].replace(' ', '_').replace(':', '_'))
+                 (str(datetime.now())[:19].replace(' ', '_').replace(':', '_')),
+            len(channels)
         )
 
         task_dev.plot(data)

@@ -4,7 +4,7 @@ import copy
 from datetime import timedelta, datetime
 
 
-def save_file(acq, file_path='/tmp/raw_data.txt'):
+def save_file(acq, file_path='/tmp/raw_data.txt', number_of_channels=1):
     delta = 1/5000
 
     def next_time(initial_time, float_delta):
@@ -19,7 +19,7 @@ def save_file(acq, file_path='/tmp/raw_data.txt'):
         f.write('')
 
     with open(file_path, 'a') as f:
-        channels = 32 if acq.sensor_type == 1 else 16
+        channels = number_of_channels
 
         initial_time = (
             acq.date_time.value if acq.date_time.value else datetime.now()
