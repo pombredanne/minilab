@@ -29,13 +29,11 @@ class DaqClient(asyncore.dispatcher):
         pass
 
     def handle_read(self):
-        self.cache += self.recv(1024)
+        self.cache += self.recv(8192)
         print(len(self.cache))
         if '\n' in self.cache:
             i = self.cache.index('\n')
             z = len('\n') + i
-
-            self.cache[:i]
 
             data = eval(self.cache[:i])
 
@@ -94,7 +92,7 @@ def start(devices):
     #polymer = DaqClient('localhost', 65000, channels['polymer'], 'polymer')
     #plotter = DaqPlotter()
 
-    asyncore.loop(0.1)
+    asyncore.loop(0.0)
 
 if __name__ == '__main__':
     # internal

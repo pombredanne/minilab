@@ -5,11 +5,17 @@ from time import sleep
 import asyncore
 import socket
 import sys
+import platform
+
+# internal
+if platform.system() == 'Linux':
+    from generator import AcquisitionTask
+else:
+    from daq.ni.acquisition import AcquisitionTask
 
 # internal
 sys.path.append('../../')
 from util import extract_devices, extract_channels
-from daq.ni.acquisition import AcquisitionTask
 from buffer import DaqPkgRingBuffer
 
 
@@ -63,8 +69,10 @@ class DaqServerHandler(asyncore.dispatcher_with_send):
         if data:
             if not self.channels:
                 self.daq_id, self.channels = eval(data)
-            print('sending data')
-            self.send(str(DaqPkgRingBuffer.extract_data(self.daq_id)) + '\n')
+
+            _buffer = str(DaqPkgRingBuffer.extract_data(self.daq_id)) + '\n'
+            print('sending %s bytes' % len(_buffer))
+            self.send(_buffer)
 
 
 class DaqServer(asyncore.dispatcher):
@@ -108,9 +116,6 @@ def startup(sensors_groups, host='localhost', port=65000):
     asyncore.loop(1)
 
 if __name__ == '__main__':
-    import sys
-    import platform
-
     # internal
     if platform.system() == 'Linux':
         sys.path.append('/var/www/mswim/')
