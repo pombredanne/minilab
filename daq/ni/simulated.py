@@ -34,7 +34,7 @@ class AcquisitionSimulatedTask():
 
     device = None
 
-    def __init__(self, device={}, acquisition_mode=''):
+    def __init__(self, device={}, acquisition_mode='', samples_per_channel=1):
         """
 
         @return:
@@ -42,17 +42,19 @@ class AcquisitionSimulatedTask():
         """
         self.device = device
 
-        self.digital_task = GeneratorDigitalTask(
+        self.digital_task = DigitalSimulatedTask(
             physical_channels=device['digital'],
-            rate=device['rate']
+            rate=device['rate'],
+            samples_per_channel=samples_per_channel
         )
 
-        self.analog_task = GeneratorAnalogTask(
+        self.analog_task = AnalogSimulatedTask(
             physical_channels=device['analog'],
             rate=device['rate'],
             minv=device['minv'],
             maxv=device['maxv'],
-            seconds_to_acquire=device['seconds_to_acquire']
+            seconds_to_acquire=device['seconds_to_acquire'],
+            samples_per_channel=samples_per_channel
         )
 
     def read(self):
@@ -107,6 +109,7 @@ class AnalogSimulatedTask():
     samples_per_channel = None
     number_of_channels = None
     buffer_size = None
+    buffer_daq_size = None
     minv = None
     maxv = None
 
@@ -116,7 +119,8 @@ class AnalogSimulatedTask():
         rate=1.0,
         minv=(-5.0),
         maxv=5.0,
-        seconds_to_acquire=3
+        seconds_to_acquire=3,
+        samples_per_channel=1000
     ):
         """
 
@@ -125,9 +129,12 @@ class AnalogSimulatedTask():
         self.seconds_to_acquire = seconds_to_acquire
         self.rate = rate
 
-        self.samples_per_channel = int(self.rate * 1)  # 2 second sampled
+        self.samples_per_channel = samples_per_channel
         self.number_of_channels = len(physical_channels)
         self.buffer_size = self.samples_per_channel * self.number_of_channels
+        self.buffer_daq_size = (
+            self.samples_per_channel * self.number_of_channels * rate
+        )
 
         self.minv = minv
         self.maxv = maxv
@@ -176,19 +183,23 @@ class DigitalSimulatedTask(object):
     """
     task = None
     physical_channels = None
-    read_int32 = None
-    bytes_per_samp_int32 = None
     samples_per_channel = None
+    buffer_size = None
+    buffer_daq_size = None
 
     def __init__(
         self,
         physical_channels,
-        rate
+        rate=1000.,
+        samples_per_channel=1000
     ):
         self.physical_channels = physical_channels
         self.rate = rate
-        self.samples_per_channel = int(self.rate * 1)  # 2 second sampled
-        self.buffer = self.samples_per_channel * len(physical_channels)
+        self.samples_per_channel = samples_per_channel
+        self.buffer_size = samples_per_channel * len(physical_channels)
+        self.buffer_daq_size = (
+            samples_per_channel * len(physical_channels) * rate
+        )
 
     def read(self):
         """
@@ -210,8 +221,8 @@ class DigitalSimulatedTask(object):
         """
 
         """
-        data = np.zeros((self.samples_per_channel,), dtype=np.uint8)
-        for x in xrange(self.samples_per_channel):
+        data = np.zeros((self.buffer_size,), dtype=np.uint8)
+        for x in xrange(self.buffer_size):
             data[x] = digital_generator()
 
         return data

@@ -23,16 +23,18 @@ class AnalogContinuousTask():
     samples_per_channel = None
     number_of_channels = None
     buffer_size = None
+    buffer_daq_size = None
     minv = None
     maxv = None
 
     def __init__(
         self,
         physical_channels=[],
-        rate=1.0,
+        rate=1000.,
         minv=(-5.0),
         maxv=5.0,
-        seconds_to_acquire=3
+        seconds_to_acquire=3,
+        samples_per_channel=1000
     ):
         """
 
@@ -42,9 +44,10 @@ class AnalogContinuousTask():
         self.seconds_to_acquire = seconds_to_acquire
         self.rate = rate
 
-        self.samples_per_channel = int(self.rate * 1)  # 2 second sampled
+        self.samples_per_channel = samples_per_channel
         self.number_of_channels = len(physical_channels)
         self.buffer_size = self.samples_per_channel * self.number_of_channels
+        self.buffer_daq_size = self.buffer_size * self.rate
 
         self.minv = minv
         self.maxv = maxv
@@ -69,7 +72,7 @@ class AnalogContinuousTask():
             self.rate,
             DAQmx_Val_Rising,
             DAQmx_Val_ContSamps,
-            self.buffer_size * 10
+            self.buffer_daq_size
         )
 
         DAQmxStartTask(self.task)
@@ -133,6 +136,8 @@ class DigitalContinuousTask(object):
     read_int32 = None
     bytes_per_samp_int32 = None
     samples_per_channel = None
+    buffer_size = None
+    buffer_daq_size = None
 
     def __init__(
         self,
@@ -143,7 +148,8 @@ class DigitalContinuousTask(object):
         self.physical_channels = physical_channels
         self.rate = rate
         self.samples_per_channel = int(self.rate * 1)  # 2 second sampled
-        self.buffer = self.samples_per_channel * len(physical_channels)
+        self.buffer_size = self.samples_per_channel * len(physical_channels)
+        self.buffer_daq_size = self.buffer_size * self.rate
 
         if physical_channels:
             DAQmxCreateTask("", byref(self.task))
@@ -153,17 +159,6 @@ class DigitalContinuousTask(object):
                 '',
                 DAQmx_Val_ChanPerLine
             )
-
-            """
-            DAQmxCfgSampClkTiming(
-                self.task,
-                '',
-                self.rate,
-                DAQmx_Val_Rising,
-                DAQmx_Val_FiniteSamps,
-                self.buffer * 10
-            )
-            """
 
     def read(self):
         """

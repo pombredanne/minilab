@@ -37,7 +37,7 @@ class AcquisitionTask():
 
     device = None
 
-    def __init__(self, device={}, acquisition_mode=''):
+    def __init__(self, device={}, acquisition_mode='', samples_per_channel=1):
         """
 
         @return:
@@ -57,7 +57,8 @@ class AcquisitionTask():
 
         self.digital_task = DIGITAL_TASK(
             physical_channels=device['digital'],
-            rate=device['rate']
+            rate=device['rate'],
+            samples_per_channel=samples_per_channel
         )
 
         self.analog_task = ANALOG_TASK(
@@ -65,7 +66,8 @@ class AcquisitionTask():
             rate=device['rate'],
             minv=device['minv'],
             maxv=device['maxv'],
-            seconds_to_acquire=device['seconds_to_acquire']
+            seconds_to_acquire=device['seconds_to_acquire'],
+            samples_per_channel=samples_per_channel
         )
 
     def read(self):

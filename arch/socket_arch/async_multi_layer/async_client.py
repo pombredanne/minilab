@@ -13,6 +13,7 @@ from arch.socket_arch.async_analyzer import plt_start, plt_stop, plt_plotter
 from arch.socket_arch.buffer import DaqDictRingBuffer
 from arch.socket_arch.util import extract_channels
 
+
 class DaqClient(asyncore.dispatcher):
 
     def __init__(self, host, port, device, daq_name):
@@ -43,11 +44,10 @@ class DaqClient(asyncore.dispatcher):
             self.cache = self.cache[z:]
             #print('%s > %s rows received.' % (self.internal_id, len(data[0])))
 
-            self.buffer += '.'
-
             DaqDictRingBuffer.append(self.name, data)
             DaqDictRingBuffer.status = True
 
+            self.buffer += '.'
 
     def writable(self):
         return len(self.buffer) > 0

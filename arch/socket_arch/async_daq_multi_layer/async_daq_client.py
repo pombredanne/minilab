@@ -3,6 +3,7 @@ from random import randint
 
 import asyncore
 import socket
+import sys
 
 sys.path.append('../../../')
 from arch.socket_arch.async_analyzer import plt_start, plt_stop, plt_plotter
@@ -26,31 +27,24 @@ class DaqClient(asyncore.dispatcher):
         pass
 
     def handle_close(self):
-        #self.close()
-        pass
+        self.close()
 
     def handle_read(self):
-        self.cache += self.recv(8192)
-        print(len(self.cache))
+        self.cache += self.recv(1024)
         if '\n' in self.cache:
             i = self.cache.index('\n')
             z = len('\n') + i
 
             data = eval(self.cache[:i])
 
-            print(data)
-
             self.cache = self.cache[z:]
-            print('%s > %s rows received.' % (self.internal_id, len(data[0])))
-            self.buffer = str(self.channels)
+            print('%s > %s rows received.' % (
+                self.internal_id, len(data[data.keys()[0]]) * len(data.keys()))
+            )
+            self.buffer = self.name
 
             DaqDictRingBuffer.append(self.name, data)
             DaqDictRingBuffer.status = True
-
-            print(
-                '%s > Buffer %s data registered.' %
-                (self.internal_id, len(DaqDictRingBuffer.data))
-            )
 
     def readable(self):
         return True
@@ -70,7 +64,7 @@ class DaqPlotter(asyncore.dispatcher):
     def __init__(self):
         asyncore.dispatcher.__init__(self)
         self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.plotter = plt_start(DaqDictRingBuffer.max_samples_per_channel)
+        self.line_charts = plt_start(len(DaqDictRingBuffer.data))
         DaqDictRingBuffer.status = False
 
     def handle_close(self):
@@ -81,19 +75,22 @@ class DaqPlotter(asyncore.dispatcher):
         return DaqDictRingBuffer.status
 
     def handle_read(self):
-        plt_plotter(DaqDictRingBuffer.data, self.plotter)
+        plt_plotter(DaqDictRingBuffer.data, self.line_charts)
         DaqDictRingBuffer.status = False
 
 
 def start(devices):
-    DaqDictRingBuffer.configure(1000, 0)
     channels = extract_channels(devices)
+
+    DaqDictRingBuffer.configure(10000, 0)
+    for name in ['ceramic']:
+        DaqDictRingBuffer.bind(name, channels[name])
 
     ceramic = DaqClient('localhost', 65000, channels['ceramic'], 'ceramic')
     #polymer = DaqClient('localhost', 65000, channels['polymer'], 'polymer')
-    #plotter = DaqPlotter()
+    plotter = DaqPlotter()
 
-    asyncore.loop(0.0)
+    asyncore.loop()
 
 if __name__ == '__main__':
     # internal
