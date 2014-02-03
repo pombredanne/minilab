@@ -1,58 +1,53 @@
 from __future__ import print_function, division
 from random import randint
 
+import sys
 import asyncore
 import socket
+import platform
+from time import sleep
 
-from async_analyzer import plt_start, plt_stop, plt_plotter
-from buffer import DaqDictRingBuffer
-from util import extract_channels
-
+# internal
+sys.path.append('../../../')
+from arch.socket_arch.async_analyzer import plt_start, plt_stop, plt_plotter
+from arch.socket_arch.buffer import DaqDictRingBuffer
+from arch.socket_arch.util import extract_channels
 
 class DaqClient(asyncore.dispatcher):
 
-    def __init__(self, host, port, channels, daq_name):
+    def __init__(self, host, port, device, daq_name):
         asyncore.dispatcher.__init__(self)
         self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
         self.connect((host, port))
-        self.channels = channels
-        self.buffer = str((daq_name, channels))
+        self.buffer = str(device)
         self.cache = ''
-        self.internal_id = randint(0, 1000000)
         self.name = daq_name
+        self.internal_id = randint(0, 1000000)
 
     def handle_connect(self):
         pass
 
     def handle_close(self):
-        #self.close()
-        pass
+        self.close()
 
     def handle_read(self):
-        self.cache += self.recv(8192)
-        print(len(self.cache))
+        self.cache += self.recv(1024)
+
         if '\n' in self.cache:
             i = self.cache.index('\n')
             z = len('\n') + i
 
+            print('Received %s bytes.' % len(self.cache[:i]))
+
             data = eval(self.cache[:i])
-
-            print(data)
-
             self.cache = self.cache[z:]
-            print('%s > %s rows received.' % (self.internal_id, len(data[0])))
-            self.buffer = str(self.channels)
+            #print('%s > %s rows received.' % (self.internal_id, len(data[0])))
+
+            self.buffer += '.'
 
             DaqDictRingBuffer.append(self.name, data)
             DaqDictRingBuffer.status = True
 
-            print(
-                '%s > Buffer %s data registered.' %
-                (self.internal_id, len(DaqDictRingBuffer.data))
-            )
-
-    def readable(self):
-        return True
 
     def writable(self):
         return len(self.buffer) > 0
@@ -69,7 +64,7 @@ class DaqPlotter(asyncore.dispatcher):
     def __init__(self):
         asyncore.dispatcher.__init__(self)
         self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.plotter = plt_start(DaqDictRingBuffer.max_samples_per_channel)
+        self.plotter = plt_start(DaqDictRingBuffer.number_of_lines)
         DaqDictRingBuffer.status = False
 
     def handle_close(self):
@@ -84,21 +79,20 @@ class DaqPlotter(asyncore.dispatcher):
         DaqDictRingBuffer.status = False
 
 
-def start(devices):
-    DaqDictRingBuffer.configure(1000, 0)
-    channels = extract_channels(devices)
+def start(sensors_groups):
+    channels = extract_channels(sensors_groups)
+    DaqDictRingBuffer.configure(100000, 0.)
+
+    for name in ['ceramic']:
+        DaqDictRingBuffer.bind(name, channels[name])
 
     ceramic = DaqClient('localhost', 65000, channels['ceramic'], 'ceramic')
-    #polymer = DaqClient('localhost', 65000, channels['polymer'], 'polymer')
+    #polymer = DaqClient('localhost', 65000, devices['polymer'])
     #plotter = DaqPlotter()
 
-    asyncore.loop(0.0)
+    asyncore.loop()
 
 if __name__ == '__main__':
-    # internal
-    import sys
-    import platform
-
     if platform.system() == 'Linux':
         sys.path.append('/var/www/mswim/')
     else:

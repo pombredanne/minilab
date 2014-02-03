@@ -77,6 +77,8 @@ class DaqDictRingBuffer(object):
 
         """
         cls.channels[buffer_name] = channels
+        print(cls.nothing)
+        print(cls.max_samples_per_channel)
         for channel in channels:
             cls.data[buffer_name][channel] = (
                 [cls.nothing] * cls.max_samples_per_channel
@@ -136,11 +138,12 @@ def test1():
             )
         ]
 
-    MAX_LINES_BUFFER = 2
-    MAX_LINES = 1
+    MAX_LINES_BUFFER = 10
+    MAX_LINES = 5
 
     x = DaqDictRingBuffer
-    x.configure(sorted_channels, MAX_LINES_BUFFER)
+    x.configure(10, 0.0)
+    x.bind('ceramic', ['Dev1/ai0', 'Dev1/ai1', 'Dev1/ai2', 'Dev1/di0'])
 
     devices = {
         'Dev1/di0': [0]*MAX_LINES,
@@ -149,7 +152,7 @@ def test1():
         'Dev1/ai2': map(lambda _: random(), range(MAX_LINES))
     }
 
-    x.append(devices)
+    x.append('ceramic', devices)
     print(x.__class__, x.tolist())
 
     devices = {
@@ -159,7 +162,7 @@ def test1():
         'Dev1/ai2': map(lambda _: random(), range(MAX_LINES))
     }
 
-    x.append(devices)
+    x.append('ceramic', devices)
     print(x.__class__, x.tolist())
 
 
@@ -178,8 +181,6 @@ def test2():
 
     devices = extract_devices(SENSORS_GROUP)
     channels = extract_channels(SENSORS_GROUP)
-
-    DaqPkgRingBuffer.configure(10, 0.0)
 
     x = DaqPkgRingBuffer
     x.configure(7, 0.0)
@@ -205,4 +206,4 @@ def test2():
 
 
 if __name__ == '__main__':
-    test2()
+    test1()

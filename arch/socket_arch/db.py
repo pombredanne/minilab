@@ -25,12 +25,17 @@ sys.path.append('../../')
 from database.psql.db import DB
 
 
+def union_data(joint_data, item_data):
+    joint_data += item_data
+    return joint_data
+
+
 def simulate_daq(settings, sampling_per_channel=15000):
     """
 
     """
-    chan = yield
-    num_channels = len(chan)
+    (channels, size) = yield
+    num_channels = len(channels)
 
     conn = DB.connect(settings)
 
@@ -60,8 +65,7 @@ def simulate_daq(settings, sampling_per_channel=15000):
     yield
 
     window = [[0.0]] * num_channels
-
-    size = 1000
+    data_window = []
 
     while True:
         for acq in aquisitions:
@@ -87,7 +91,10 @@ def simulate_daq(settings, sampling_per_channel=15000):
                     window[i] = window[i] + [eval('ds.sensor%s' % (i+1))]
 
                 if len(window[0]) == size:
-                    yield window
+                    del data_window[:]
+                    union_data(data_window, window)
+                    yield data_window
+                    del data_window[:]
                     window = [[0.0]] * num_channels
 
 
@@ -104,5 +111,5 @@ if __name__ == '__main__':
     channels = ['Dev1/ao0', 'Dev1/ao1', 'Dev1/ao2', 'Dev1/ao3']
     s = simulate_daq(settings)
     s.next()
-    s.send(channels)
+    s.send((channels, 1000))
     print(s.next())

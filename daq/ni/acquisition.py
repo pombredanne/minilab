@@ -1,8 +1,14 @@
 from __future__ import print_function
-from continuous import DigitalContinuousTask, AnalogContinuousTask
 from datetime import datetime
 from collections import defaultdict
 from time import sleep
+from simulated import DigitalSimulatedTask, AnalogSimulatedTask
+
+try:
+    from continuous import DigitalContinuousTask, AnalogContinuousTask
+except:
+    from simulated import DigitalSimulatedTask as DigitalContinuousTask
+    from simulated import AnalogSimulatedTask as AnalogContinuousTask
 
 
 def calculate_time_sequence(delta_t, quantity):
@@ -42,6 +48,10 @@ class AcquisitionTask():
         if acquisition_mode == 'continuous':
             DIGITAL_TASK = DigitalContinuousTask
             ANALOG_TASK = AnalogContinuousTask
+
+        elif acquisition_mode == 'simulated':
+            DIGITAL_TASK = DigitalSimulatedTask
+            ANALOG_TASK = AnalogSimulatedTask
         else:
             raise Exception('Invalid Acquisition Mode.')
 

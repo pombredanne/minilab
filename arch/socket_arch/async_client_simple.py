@@ -15,7 +15,6 @@ else:
 
 from mswim import settings
 from async_analyzer import plt_start, plt_stop, plt_plotter
-from buffer import DaqRingBuffer
 
 
 class ClientSimple(asyncore.dispatcher):
