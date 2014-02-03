@@ -113,7 +113,7 @@ def startup(sensors_groups, host='localhost', port=65000):
 
     server.append(DaqServer(host, port))
 
-    asyncore.loop(1)
+    asyncore.loop(0.0)
 
 if __name__ == '__main__':
     # internal
