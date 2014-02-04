@@ -15,8 +15,21 @@ def digital_generator():
     return randint(0, 1)
 
 
-def analog_generator():
-    return random()
+def analog_generator(channels=[], samples_per_channel=1000):
+    t = np.linspace(-1, 1, samples_per_channel)
+
+    data_size = t.size
+
+    result = []
+    while True:
+        for position in xrange(0, samples_per_channel, 100):
+            result[:] = []
+            for k, ch in enumerate(channels):
+                data = list(t[position:data_size]) + list(t[0:position])
+                data = np.sin(2 * np.pi * np.array(data) + k) * 10
+                result += list(data)
+
+            yield result
 
 
 class AcquisitionSimulatedTask():
@@ -139,6 +152,11 @@ class AnalogSimulatedTask():
         self.minv = minv
         self.maxv = maxv
 
+        self.analog_generator = analog_generator(
+            channels=self.physical_channels,
+            samples_per_channel=self.samples_per_channel
+        )
+
     def read(self):
         """
         @return: data acquisitions, time of each acquisition
@@ -155,12 +173,7 @@ class AnalogSimulatedTask():
         """
 
         """
-        data = np.zeros((self.buffer_size,), dtype=np.float64)
-
-        for x in xrange(self.buffer_size):
-            data[x] = analog_generator()
-
-        return data
+        return self.analog_generator.next()
 
     def close(self):
         print('')

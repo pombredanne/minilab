@@ -77,8 +77,6 @@ class DaqDictRingBuffer(object):
 
         """
         cls.channels[buffer_name] = channels
-        print(cls.nothing)
-        print(cls.max_samples_per_channel)
         for channel in channels:
             cls.data[buffer_name][channel] = (
                 [cls.nothing] * cls.max_samples_per_channel
@@ -98,18 +96,27 @@ class DaqDictRingBuffer(object):
             cls.data[buffer_name][channel] += new_data[channel]
 
     @classmethod
-    def extract(cls, start_position, end_position):
+    def extract(cls, buffer_name=None, chunk=1024):
         """ Extract data """
-        _data = defaultdict(list)
-        for position, key in enumerate(cls.data):
+        _data = defaultdict(dict)
+        if buffer_name:
+            for channel in cls.data[buffer_name]:
+                _data[channel] = (
+                    cls.data[buffer_name][channel][:chunk]
+                )
 
-            _data[key] = (
-                cls.data[key][start_position:end_position]
-            )
+                cls.data[buffer_name][channel][:chunk] = [cls.nothing] * chunk
+        else:
+            for buffer_name in cls.data:
+                _data[buffer_name] = {}
+                for channel in cls.data[buffer_name]:
+                    _data[buffer_name][channel] = (
+                        cls.data[buffer_name][channel][:chunk]
+                    )
 
-            cls.data[key][:end_position] = (
-                [cls.nothing] * len(cls.data[key][:end_position])
-            )
+                    cls.data[buffer_name][channel][:chunk] = (
+                        [cls.nothing] * chunk
+                    )
 
         return _data
 
@@ -118,92 +125,91 @@ class DaqDictRingBuffer(object):
         """ return list of elements in correct order. """
         return cls.data
 
+if __name__ == '__main__':
+    def test1():
+        from random import random
 
-def test1():
-    from random import random
-
-    channels = [
-        dict(
-            [('Dev1/ai%s' % sen, sen) for sen in range(3)] +
-            [('Dev1/di0', 3)]
-        )
-    ]
-
-    sorted_channels = {}
-
-    for _id, chans in enumerate(channels):
-        sorted_channels[_id] = [
-            c for c in sorted(
-                chans, key=lambda x: chans[x]
+        channels = [
+            dict(
+                [('Dev1/ai%s' % sen, sen) for sen in range(3)] +
+                [('Dev1/di0', 3)]
             )
         ]
 
-    MAX_LINES_BUFFER = 10
-    MAX_LINES = 5
+        sorted_channels = {}
 
-    x = DaqDictRingBuffer
-    x.configure(10, 0.0)
-    x.bind('ceramic', ['Dev1/ai0', 'Dev1/ai1', 'Dev1/ai2', 'Dev1/di0'])
+        for _id, chans in enumerate(channels):
+            sorted_channels[_id] = [
+                c for c in sorted(
+                    chans, key=lambda x: chans[x]
+                )
+            ]
 
-    devices = {
-        'Dev1/di0': [0]*MAX_LINES,
-        'Dev1/ai0': map(lambda _: random(), range(MAX_LINES)),
-        'Dev1/ai1': map(lambda _: random(), range(MAX_LINES)),
-        'Dev1/ai2': map(lambda _: random(), range(MAX_LINES))
-    }
+        MAX_LINES_BUFFER = 10
+        MAX_LINES = 5
 
-    x.append('ceramic', devices)
-    print(x.__class__, x.tolist())
+        x = DaqDictRingBuffer
+        x.configure(10, 0.0)
+        x.bind('ceramic', ['Dev1/ai0', 'Dev1/ai1', 'Dev1/ai2', 'Dev1/di0'])
 
-    devices = {
-        'Dev1/di0': [0]*MAX_LINES,
-        'Dev1/ai0': map(lambda _: random(), range(MAX_LINES)),
-        'Dev1/ai1': map(lambda _: random(), range(MAX_LINES)),
-        'Dev1/ai2': map(lambda _: random(), range(MAX_LINES))
-    }
+        devices = {
+            'Dev1/di0': [0]*MAX_LINES,
+            'Dev1/ai0': map(lambda _: random(), range(MAX_LINES)),
+            'Dev1/ai1': map(lambda _: random(), range(MAX_LINES)),
+            'Dev1/ai2': map(lambda _: random(), range(MAX_LINES))
+        }
 
-    x.append('ceramic', devices)
-    print(x.__class__, x.tolist())
+        x.append('ceramic', devices)
+        print(x.__class__, x.tolist())
 
+        devices = {
+            'Dev1/di0': [0]*MAX_LINES,
+            'Dev1/ai0': map(lambda _: random(), range(MAX_LINES)),
+            'Dev1/ai1': map(lambda _: random(), range(MAX_LINES)),
+            'Dev1/ai2': map(lambda _: random(), range(MAX_LINES))
+        }
 
-def test2():
-    # internal
-    import sys
-    import platform
+        x.append('ceramic', devices)
+        print(x.__class__, x.tolist())
 
-    if platform.system() == 'Linux':
-        sys.path.append('/var/www/mswim/')
-    else:
-        sys.path.append('c:/mswim/')
+        print(x.extract('ceramic', 5))
 
-    from mswim.settings import DEVICES as SENSORS_GROUP
-    from util import extract_devices, extract_channels
+    def test2():
+        # internal
+        import sys
+        import platform
 
-    devices = extract_devices(SENSORS_GROUP)
-    channels = extract_channels(SENSORS_GROUP)
+        if platform.system() == 'Linux':
+            sys.path.append('/var/www/mswim/')
+        else:
+            sys.path.append('c:/mswim/')
 
-    x = DaqPkgRingBuffer
-    x.configure(7, 0.0)
+        from mswim.settings import DEVICES as SENSORS_GROUP
+        from util import extract_devices, extract_channels
 
-    for name in channels:
-        x.bind(name, channels[name])
+        devices = extract_devices(SENSORS_GROUP)
+        channels = extract_channels(SENSORS_GROUP)
 
-    x.append({'Dev4/ai30': [1, 2, 3, 4, 5], 'Dev4/ai31': [6, 7, 8, 9, 0]})
-    print(x.tolist())
+        x = DaqPkgRingBuffer
+        x.configure(7, 0.0)
 
-    data = x.extract_data('ceramic')
-    print('extracted data:')
-    print(data)
+        for name in channels:
+            x.bind(name, channels[name])
 
-    data = x.extract_data('ceramic')
-    print('extracted data:')
-    print(data)
+        x.append({'Dev4/ai30': [1, 2, 3, 4, 5], 'Dev4/ai31': [6, 7, 8, 9, 0]})
+        print(x.tolist())
 
-    x.append({'Dev5/ai1': [1, 2, 3, 4, 5], 'Dev5/ai2': [6, 7, 8, 9, 0]})
-    data = x.extract_data('ceramic')
-    print('extracted data:')
-    print(data)
+        data = x.extract_data('ceramic')
+        print('extracted data:')
+        print(data)
 
+        data = x.extract_data('ceramic')
+        print('extracted data:')
+        print(data)
 
-if __name__ == '__main__':
+        x.append({'Dev5/ai1': [1, 2, 3, 4, 5], 'Dev5/ai2': [6, 7, 8, 9, 0]})
+        data = x.extract_data('ceramic')
+        print('extracted data:')
+        print(data)
+
     test1()

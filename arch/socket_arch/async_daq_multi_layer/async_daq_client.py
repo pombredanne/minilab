@@ -6,7 +6,7 @@ import socket
 import sys
 
 sys.path.append('../../../')
-from arch.socket_arch.async_analyzer import plt_start, plt_stop, plt_plotter
+from arch.socket_arch.async_analyzer import DaqMultiPlotter
 from arch.socket_arch.buffer import DaqDictRingBuffer
 from arch.socket_arch.util import extract_channels
 
@@ -61,34 +61,44 @@ class DaqPlotter(asyncore.dispatcher):
     """
 
     """
-    def __init__(self):
+    num_frames = 0
+
+    def __init__(self, num_frames=1000):
         asyncore.dispatcher.__init__(self)
         self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.line_charts = plt_start(len(DaqDictRingBuffer.data))
+        self.num_frames = num_frames
+
+        DaqMultiPlotter.configure(num_frames)
+        DaqMultiPlotter.start()
+
         DaqDictRingBuffer.status = False
 
     def handle_close(self):
-        plt_stop()
+        DaqMultiPlotter.stop()
         pass
 
     def readable(self):
         return DaqDictRingBuffer.status
 
     def handle_read(self):
-        plt_plotter(DaqDictRingBuffer.data, self.line_charts)
+        data = DaqDictRingBuffer.extract(chunk=self.num_frames)
+
+        DaqMultiPlotter.send_data(data)
+
         DaqDictRingBuffer.status = False
 
 
 def start(devices):
     channels = extract_channels(devices)
+    samples_per_channel = 100
 
-    DaqDictRingBuffer.configure(10000, 0)
-    for name in ['ceramic']:
+    DaqDictRingBuffer.configure(samples_per_channel, 0.)
+    for name in ['ceramic', 'polymer']:
         DaqDictRingBuffer.bind(name, channels[name])
 
     ceramic = DaqClient('localhost', 65000, channels['ceramic'], 'ceramic')
-    #polymer = DaqClient('localhost', 65000, channels['polymer'], 'polymer')
-    plotter = DaqPlotter()
+    polymer = DaqClient('localhost', 65000, channels['polymer'], 'polymer')
+    plotter = DaqPlotter(num_frames=samples_per_channel)
 
     asyncore.loop()
 
@@ -96,6 +106,7 @@ if __name__ == '__main__':
     # internal
     import sys
     import platform
+    import pickle
 
     if platform.system() == 'Linux':
         sys.path.append('/var/www/mswim/')

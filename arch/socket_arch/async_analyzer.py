@@ -1,57 +1,99 @@
 from __future__ import print_function, division
 from collections import defaultdict
-from pylab import ion, ioff, plot, arange, draw, pause, show
+from matplotlib import pyplot as plt
+from matplotlib.ticker import EngFormatter
 from random import random, randint
 
-import pylab
 import time
 import numpy as np
 
 
-def plt_start(number_of_chart_lines):
-    ion()
-    pylab.grid()
-
-    lines = []
-    for _ in xrange(number_of_chart_lines):
-        line, = plot(arange(0, 0.01*100, 0.01), [0]*100)
-        lines.append(line)
-    return lines
-
-
-def plt_plotter(data, chart_lines, name='ceramic'):
+class DaqMultiPlotter():
     """
 
     """
-    for i in range(1, int(1000/100)):
-        for key_line, line in enumerate(chart_lines):
-            sensors = data[data.keys()[key_line]]
-            print(sensors)
+    data_size = None
+    time = None
+    formatter = EngFormatter(unit='s', places=1)
 
-            frame = sensors[i*100:(i+1)*100]
-            line.set_ydata(frame)  # update the data
-            draw()                 # redraw the canvas
-            pause(0.0000000001)
+    # interval
+    frame_limits = None
 
+    @classmethod
+    def configure(cls, samples_per_channel):
+        """
 
-def plt_stop():
-    ioff()
-    show()
+        """
+        cls.data_size = samples_per_channel
+        cls.time = np.linspace(0, 1, samples_per_channel)
+        cls.formatter = EngFormatter(unit='s', places=1)
+
+        # interval
+        cls.frame_limits = [0, 1, -10, 10]
+
+    @classmethod
+    def start(cls):
+        plt.ion()
+        plt.show()
+
+    @classmethod
+    def send_data(cls, data):
+        """
+
+        """
+        plt.clf()
+
+        num_charts = len(data)
+        i = 0
+        for buffer_name in data:
+            i += 1
+            chart_id = num_charts*100 + 10 + i
+            for channel in data[buffer_name]:
+                ax = plt.subplot(chart_id)
+                ax.xaxis.set_major_formatter(cls.formatter)
+                ax.grid()
+
+                ax.plot(cls.time, data[buffer_name][channel])
+
+        plt.draw()
+        plt.pause(0.000001)
+
+    @classmethod
+    def stop(cls):
+        plt.ioff()
+        plt.show()
 
 
 if __name__ == '__main__':
-    def test():
-        data = defaultdict(list)
+    def test1():
+        """
+
+        """
         cols = 16
         rows = 1000
+        num_frames = 100
+        interval_a = -8
+        interval_b = +8
 
-        chart_lines = plt_start(cols)
+        data = defaultdict(dict)
 
-        for x in range(cols):
-            data['Dev1/ia%s' % x].append([random() for _ in range(rows)])
+        DaqMultiPlotter.configure(rows)
 
-        plt_plotter(data, chart_lines)
+        DaqMultiPlotter.start()
 
-        plt_stop()
+        try:
+            while True:
+                for group in ['ceramic', 'polymer']:
+                    for x in range(cols):
+                        data[group]['Dev1/ia%s' % x] = (
+                            (interval_b - interval_a) *
+                            np.random.random_sample((rows,)) + interval_a
+                        )
+                DaqMultiPlotter.send_data(data)
+        except:
+            pass
 
-    test()
+        DaqMultiPlotter.stop()
+
+    test1()
+    # math_algorithms
