@@ -70,6 +70,7 @@ class DaqDictRingBuffer(object):
     data = defaultdict(dict)
     nothing = None
     channels = {}
+    status_buffer = {}
 
     @classmethod
     def bind(cls, buffer_name, channels):
@@ -77,6 +78,7 @@ class DaqDictRingBuffer(object):
 
         """
         cls.channels[buffer_name] = channels
+        cls.status_buffer[buffer_name] = False
         for channel in channels:
             cls.data[buffer_name][channel] = (
                 [cls.nothing] * cls.max_samples_per_channel
@@ -92,6 +94,14 @@ class DaqDictRingBuffer(object):
     def append(cls, buffer_name, new_data):
         """ Append an element overwriting the oldest one. """
         for channel in cls.channels[buffer_name]:
+            chunk = len(new_data[channel])
+            # check if same date will be overwritten
+            if not all(
+                value == cls.nothing
+                for value in cls.data[buffer_name][channel][:chunk]
+            ):
+                raise Exception('Data buffered will be overwritten.')
+
             del cls.data[buffer_name][channel][:len(new_data[channel])]
             cls.data[buffer_name][channel] += new_data[channel]
 
@@ -119,6 +129,21 @@ class DaqDictRingBuffer(object):
                     )
 
         return _data
+
+    @classmethod
+    def status(cls, buffer_name=None, status=None):
+        """
+
+        """
+        if not buffer_name and status is None:
+            return cls.status_buffer.values()
+
+        if not buffer_name:
+            for n in cls.status_buffer:
+                cls.status_buffer[n] = status
+            return
+
+        cls.status_buffer[buffer_name] = status
 
     @classmethod
     def tolist(cls):

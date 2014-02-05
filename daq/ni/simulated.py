@@ -4,7 +4,7 @@ Created on Tue Oct  8 16:11:48 2013
 
 @author: ivan
 """
-from __future__ import print_function
+from __future__ import print_function, division
 from random import random, randint
 from collections import defaultdict
 
@@ -15,18 +15,37 @@ def digital_generator():
     return randint(0, 1)
 
 
-def analog_generator(channels=[], samples_per_channel=1000):
-    t = np.linspace(-1, 1, samples_per_channel)
+def sin_wave(channels=[], samples_per_channel=1000):
+    t = np.linspace(0, 1, samples_per_channel)
 
     data_size = t.size
+    amplitude = 10  # Amplitude
 
     result = []
     while True:
-        for position in xrange(0, samples_per_channel, 100):
+        for position in xrange(0, samples_per_channel, 1):
             result[:] = []
             for k, ch in enumerate(channels):
                 data = list(t[position:data_size]) + list(t[0:position])
-                data = np.sin(2 * np.pi * np.array(data) + k) * 10
+                data = np.sin(2 * np.pi * np.array(data) + k) * amplitude
+                result += list(data)
+
+            yield result
+
+
+def triangle_wave(channels=[], samples_per_channel=1000):
+    t = np.linspace(0, 1, samples_per_channel)
+    number_of_channels = len(channels)
+    data_size = t.size
+    amplitude = 10  # Amplitude
+
+    result = []
+    while True:
+        for position in xrange(0, samples_per_channel, 10):
+            result[:] = []
+            for k, ch in enumerate(channels):
+                data = list(t[position:data_size]) + list(t[0:position])
+                data = np.array(data) + (k / number_of_channels) * amplitude
                 result += list(data)
 
             yield result
@@ -152,7 +171,7 @@ class AnalogSimulatedTask():
         self.minv = minv
         self.maxv = maxv
 
-        self.analog_generator = analog_generator(
+        self.analog_generator = triangle_wave(
             channels=self.physical_channels,
             samples_per_channel=self.samples_per_channel
         )

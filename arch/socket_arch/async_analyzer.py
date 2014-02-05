@@ -45,15 +45,24 @@ class DaqMultiPlotter():
 
         num_charts = len(data)
         i = 0
+        check_list = []
         for buffer_name in data:
             i += 1
             chart_id = num_charts*100 + 10 + i
+            check_list[:] = []
             for channel in data[buffer_name]:
+                check_list.append(len(data[buffer_name][channel]))
+
                 ax = plt.subplot(chart_id)
                 ax.xaxis.set_major_formatter(cls.formatter)
-                ax.grid()
+                ax.set_xlabel(buffer_name)
+                ax.axis(cls.frame_limits)
+                ax.set_autoscale_on(False)
 
                 ax.plot(cls.time, data[buffer_name][channel])
+
+            if not all(check_list[0] == num for num in check_list):
+                raise Exception('Data channel out of range.')
 
         plt.draw()
         plt.pause(0.000001)
@@ -69,7 +78,7 @@ if __name__ == '__main__':
         """
 
         """
-        cols = 16
+        cols = 2
         rows = 1000
         num_frames = 100
         interval_a = -8
