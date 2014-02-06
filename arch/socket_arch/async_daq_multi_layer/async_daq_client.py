@@ -130,9 +130,9 @@ class DaqPlotter(asyncore.dispatcher):
 
 def start(devices):
     channels = extract_channels(devices)
-    samples_per_channel = 100
+    samples_per_channel = 1000
 
-    DaqDictRingBuffer.configure(samples_per_channel*20, 0.)
+    DaqDictRingBuffer.configure(samples_per_channel, 0.)
     groups = ['ceramic', 'polymer']
     for name in groups:
         DaqDictRingBuffer.bind(name, channels[name])

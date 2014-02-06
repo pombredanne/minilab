@@ -33,7 +33,6 @@ class DaqRegister(asyncore.dispatcher):
         asyncore.dispatcher.__init__(self)
         self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
         self.device = device
-        self.status = False
 
         self.daq = AcquisitionTask(device, 'continuous', 100)
         print('Device %s is initialized' % device['name'])
@@ -107,7 +106,7 @@ def startup(sensors_groups, host='localhost', port=65000):
 
     devices = extract_devices(sensors_groups)
     channels = extract_channels(sensors_groups)
-    DaqPkgRingBuffer.configure(10, 0.0)
+    DaqPkgRingBuffer.configure(100, 0.0)
 
     for name in channels:
         DaqPkgRingBuffer.bind(name, channels[name])
@@ -117,7 +116,7 @@ def startup(sensors_groups, host='localhost', port=65000):
 
     server.append(DaqServer(host, port))
 
-    asyncore.loop()
+    asyncore.loop(0.5)
 
 if __name__ == '__main__':
     # internal

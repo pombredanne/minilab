@@ -12,12 +12,14 @@ class DaqPkgRingBuffer(object):
     data = defaultdict(dict)
     nothing = None
     number_of_lines = 0
+    status_buffer = defaultdict(bool)
 
     @classmethod
     def bind(cls, name, channels):
         """
 
         """
+        cls.status_buffer[name] = False
         for channel in channels:
             cls.data[channel][name] = []
 
@@ -41,7 +43,9 @@ class DaqPkgRingBuffer(object):
                         cls.max_limit_package
                 ):
                     cls.data[channel][buffer_name].pop(0)
+                    print('Data overwritten.')
                 cls.data[channel][buffer_name].append(new_data[channel])
+                cls.status_buffer[buffer_name] = True
 
     @classmethod
     def extract_data(cls, buffer_name):
@@ -55,8 +59,13 @@ class DaqPkgRingBuffer(object):
                 continue
 
             result[channel] = cls.data[channel][buffer_name].pop(0)
+            cls.status_buffer[buffer_name] = False
 
         return result if result else None
+
+    @classmethod
+    def status(cls, buffer_name):
+        return cls.status_buffer[buffer_name]
 
     @classmethod
     def tolist(cls):
