@@ -171,7 +171,7 @@ class AnalogSimulatedTask():
         self.minv = minv
         self.maxv = maxv
 
-        self.analog_generator = triangle_wave(
+        self.analog_generator = sin_wave(
             channels=self.physical_channels,
             samples_per_channel=self.samples_per_channel
         )

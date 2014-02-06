@@ -1,3 +1,8 @@
+# -*- coding: utf-8 -*-
+"""
+Async module to server data from Acquisition Tasks through Ring Buffers
+
+"""
 from __future__ import print_function, division
 from random import randint
 from time import sleep
@@ -5,16 +10,18 @@ from time import sleep
 import asyncore
 import socket
 import sys
+import platform
 
 # internal
 sys.path.append('../../../')
-from ..util import extract_devices, extract_channels
 from daq.ni.acquisition import AcquisitionTask
-from ..buffer import DaqPkgRingBuffer
+from arch.socket_arch.util import extract_devices, extract_channels
+from arch.socket_arch.buffer import DaqPkgRingBuffer
 
 
 class DaqRegister(asyncore.dispatcher):
     """
+    Socket class to register, process and return data from Acquisition Tasks
 
     """
     device = ''
@@ -26,9 +33,8 @@ class DaqRegister(asyncore.dispatcher):
         asyncore.dispatcher.__init__(self)
         self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
         self.device = device
-        self.status = False
 
-        self.daq = AcquisitionTask(device, 'continuous')
+        self.daq = AcquisitionTask(device, 'continuous', 100)
         print('Device %s is initialized' % device['name'])
 
     def readable(self):
@@ -38,6 +44,8 @@ class DaqRegister(asyncore.dispatcher):
 
 class DaqServerHandler(asyncore.dispatcher_with_send):
     """
+    Handler used to sends data to DAQ Clients
+
     """
     def __init__(self, conn_sock, client_address):
         self.client_address = client_address
@@ -63,12 +71,15 @@ class DaqServerHandler(asyncore.dispatcher_with_send):
         if data:
             if not self.channels:
                 self.daq_id, self.channels = eval(data)
-            print('sending data')
-            self.send(str(DaqPkgRingBuffer.extract_data(self.daq_id)) + '\n')
+
+            _buffer = str(DaqPkgRingBuffer.extract_data(self.daq_id)) + '\n'
+            print('sending %s bytes' % len(_buffer))
+            self.send(_buffer)
 
 
 class DaqServer(asyncore.dispatcher):
     """
+    Daq Server provides data to DAQ Client from Ring Buffer
 
     """
     def __init__(self, host, port):
@@ -87,29 +98,26 @@ class DaqServer(asyncore.dispatcher):
             handler = DaqServerHandler(sock, address)
 
 
-def startup(sensors_groups, host='localhost', port=65000):
-    """
-
-    """
-    server = []
-
-    devices = extract_devices(sensors_groups)
-    channels = extract_channels(sensors_groups)
-    DaqPkgRingBuffer.configure(10, 0.0)
-
-    for name in channels:
-        DaqPkgRingBuffer.bind(name, channels[name])
-
-    for name in devices:
-        server.append(DaqRegister(devices[name]))
-
-    server.append(DaqServer(host, port))
-
-    asyncore.loop(1)
-
 if __name__ == '__main__':
-    import sys
-    import platform
+    def startup(sensors_groups, host='localhost', port=65000):
+        """
+
+        """
+        server = []
+
+        devices = extract_devices(sensors_groups)
+        channels = extract_channels(sensors_groups)
+        DaqPkgRingBuffer.configure(100, 0.0)
+
+        for name in channels:
+            DaqPkgRingBuffer.bind(name, channels[name])
+
+        for name in devices:
+            server.append(DaqRegister(devices[name]))
+
+        server.append(DaqServer(host, port))
+
+        asyncore.loop(0.5)
 
     # internal
     if platform.system() == 'Linux':

@@ -9,7 +9,7 @@ from time import sleep
 
 # internal
 sys.path.append('../../../')
-from arch.socket_arch.async_analyzer import plt_start, plt_stop, plt_plotter
+from arch.socket_arch.async_plotter import plt_start, plt_stop, plt_plotter
 from arch.socket_arch.buffer import DaqDictRingBuffer
 from arch.socket_arch.util import extract_channels
 

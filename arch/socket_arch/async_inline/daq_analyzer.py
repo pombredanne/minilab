@@ -16,16 +16,16 @@ class DaqAsyncTurn(object):
     Controls the async process ordered.
 
     """
-    daq_list = None
+    daq_list = []
     position = 0
 
     @classmethod
-    def configure(cls, daq_list):
+    def bind(cls, daq_name):
         """
         Sets a DAQ list processes.
 
         """
-        cls.daq_list = daq_list
+        cls.daq_list += [daq_name]
 
     @classmethod
     def is_my_turn(cls, daq_name):
@@ -46,8 +46,10 @@ class DaqAsyncTurn(object):
         )
 
 
-class DaqClient(asyncore.dispatcher):
+class DaqAnalyzer(asyncore.dispatcher):
+    """
 
+    """
     def __init__(self, host, port, channels, daq_name):
         asyncore.dispatcher.__init__(self)
         self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -57,6 +59,8 @@ class DaqClient(asyncore.dispatcher):
         self.cache = ''
         self.internal_id = randint(0, 1000000)
         self.name = daq_name
+
+        DaqAsyncTurn.bind(self.name)
 
     def handle_connect(self):
         pass
@@ -105,6 +109,8 @@ class DaqPlotter(asyncore.dispatcher):
         self.samples_per_channel = samples_per_channel
         self.name = 'plotter'
 
+        DaqAsyncTurn.bind(self.name)
+
         DaqMultiPlotter.configure(samples_per_channel)
         DaqMultiPlotter.start()
 
@@ -128,24 +134,22 @@ class DaqPlotter(asyncore.dispatcher):
             DaqAsyncTurn.next_turn()
 
 
-def start(devices):
-    channels = extract_channels(devices)
-    samples_per_channel = 100
-
-    DaqDictRingBuffer.configure(samples_per_channel, 0.)
-    groups = ['ceramic', 'polymer']
-    for name in groups:
-        DaqDictRingBuffer.bind(name, channels[name])
-
-    DaqAsyncTurn.configure(groups + ['plotter'])
-
-    ceramic = DaqClient('localhost', 65000, channels['ceramic'], 'ceramic')
-    polymer = DaqClient('localhost', 65000, channels['polymer'], 'polymer')
-    plotter = DaqPlotter(samples_per_channel=samples_per_channel)
-
-    asyncore.loop()
-
 if __name__ == '__main__':
+    def start(devices):
+        channels = extract_channels(devices)
+        samples_per_channel = 100
+
+        DaqDictRingBuffer.configure(samples_per_channel, 0.)
+        groups = ['ceramic', 'polymer']
+        for name in groups:
+            DaqDictRingBuffer.bind(name, channels[name])
+
+        ceramic = DaqAnalyzer('localhost', 65000, channels['ceramic'], 'ceramic')
+        polymer = DaqAnalyzer('localhost', 65000, channels['polymer'], 'polymer')
+        plotter = DaqPlotter(samples_per_channel=samples_per_channel)
+
+        asyncore.loop()
+
     # internal
     import sys
     import platform

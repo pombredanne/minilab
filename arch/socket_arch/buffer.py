@@ -17,7 +17,10 @@ class DaqPkgRingBuffer(object):
     @classmethod
     def bind(cls, name, channels):
         """
-
+        @param name: Buffer name
+        @type name: str
+        @param channels: List of channels of the buffer
+        @rtype channels: list
         """
         cls.status_buffer[name] = False
         for channel in channels:
@@ -44,6 +47,7 @@ class DaqPkgRingBuffer(object):
                 ):
                     cls.data[channel][buffer_name].pop(0)
                     print('Data overwritten.')
+
                 cls.data[channel][buffer_name].append(new_data[channel])
                 cls.status_buffer[buffer_name] = True
 
@@ -80,6 +84,7 @@ class DaqDictRingBuffer(object):
     nothing = None
     channels = {}
     status_buffer = {}
+    overwritten_exception = None
 
     @classmethod
     def bind(cls, buffer_name, channels):
@@ -94,10 +99,14 @@ class DaqDictRingBuffer(object):
             )
 
     @classmethod
-    def configure(cls, max_samples_per_channel, nothing_value=0):
+    def configure(
+        cls, max_samples_per_channel,
+        nothing_value=0, overwritten_exception=True
+    ):
         """ Return a list of elements from the oldest to the newest. """
         cls.max_samples_per_channel = max_samples_per_channel
         cls.nothing = nothing_value
+        cls.overwritten_exception = overwritten_exception
 
     @classmethod
     def append(cls, buffer_name, new_data):
@@ -105,36 +114,39 @@ class DaqDictRingBuffer(object):
         for channel in cls.channels[buffer_name]:
             chunk = len(new_data[channel])
             # check if same date will be overwritten
-            if not all(
-                value == cls.nothing
-                for value in cls.data[buffer_name][channel][:chunk]
-            ):
-                raise Exception('Data buffered will be overwritten.')
+            if cls.overwritten_exception:
+                if not all(
+                    value == cls.nothing
+                    for value in cls.data[buffer_name][channel][:chunk]
+                ):
+                    raise Exception('Data buffered will be overwritten.')
 
             del cls.data[buffer_name][channel][:len(new_data[channel])]
             cls.data[buffer_name][channel] += new_data[channel]
 
     @classmethod
-    def extract(cls, buffer_name=None, chunk=1024):
+    def extract(cls, buffer_name=None, chunk=1024, start_index=0):
         """ Extract data """
         _data = defaultdict(dict)
         if buffer_name:
             for channel in cls.data[buffer_name]:
                 _data[channel] = (
-                    cls.data[buffer_name][channel][:chunk]
+                    cls.data[buffer_name][channel][start_index:chunk]
                 )
 
-                cls.data[buffer_name][channel][:chunk] = [cls.nothing] * chunk
+                cls.data[buffer_name][channel][:chunk+start_index] = (
+                    [cls.nothing] * (chunk + start_index)
+                )
         else:
             for buffer_name in cls.data:
                 _data[buffer_name] = {}
                 for channel in cls.data[buffer_name]:
                     _data[buffer_name][channel] = (
-                        cls.data[buffer_name][channel][:chunk]
+                        cls.data[buffer_name][channel][start_index:chunk]
                     )
 
-                    cls.data[buffer_name][channel][:chunk] = (
-                        [cls.nothing] * chunk
+                    cls.data[buffer_name][channel][:chunk+start_index] = (
+                        [cls.nothing] * (chunk + start_index)
                     )
 
         return _data

@@ -14,7 +14,7 @@ else:
     sys.path.append('c:/mswim/')
 
 from mswim import settings
-from async_analyzer import plt_start, plt_stop, plt_plotter
+from async_plotter import plt_start, plt_stop, plt_plotter
 
 
 class ClientSimple(asyncore.dispatcher):
