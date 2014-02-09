@@ -30,7 +30,8 @@ class SegmentationSignal(object):
                 )
 
             if segmented_data:
-                callback(segmented_data)
+                print('send new data ' + buffer_name)
+                callback({buffer_name: segmented_data})
 
 
 class SegmentedByTrigger(object):

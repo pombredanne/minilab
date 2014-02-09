@@ -32,7 +32,7 @@ class DaqRegister(object):
         """
         self.device = device
 
-        self.daq = AcquisitionTask(device, 'continuous', 100)
+        self.daq = AcquisitionTask(device, 'continuous', 15000)
         print('Device %s is initialized' % device['name'])
 
     def read(self):

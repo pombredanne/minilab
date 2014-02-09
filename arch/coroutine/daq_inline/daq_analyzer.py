@@ -1,5 +1,6 @@
 from __future__ import print_function, division
 from random import randint
+from collections import defaultdict
 
 import asyncore
 import socket
@@ -89,6 +90,43 @@ class DaqPlotter():
             data = DaqDictRingBuffer.extract(chunk=self.samples_per_channel)
 
             DaqMultiPlotter.send_data(data)
+
+            # Wait for new data on Ring Buffer
+            DaqDictRingBuffer.status(status=False)
+            DaqAsyncTurn.next_turn()
+
+
+class DaqAsyncPlotter():
+    """
+
+    """
+    num_frames = 0
+    data = {}
+
+    def __init__(self, samples_per_channel=15000, tree_channels={}):
+        self.samples_per_channel = samples_per_channel
+        self.name = 'async-plotter'
+        self.data = defaultdict(dict)
+
+        for group_name in tree_channels:
+            for channel_name in tree_channels[group_name]:
+                self.data[group_name][channel_name] = [0] * samples_per_channel
+
+        DaqAsyncTurn.bind(self.name)
+
+        DaqMultiPlotter.configure(samples_per_channel)
+        DaqMultiPlotter.start()
+
+    def send(self, data):
+        """
+
+        """
+        for name in data:
+            self.data[name] = data[name]
+
+    def read(self):
+        if DaqAsyncTurn.is_my_turn(self.name):
+            DaqMultiPlotter.send_data(self.data)
 
             # Wait for new data on Ring Buffer
             DaqDictRingBuffer.status(status=False)
