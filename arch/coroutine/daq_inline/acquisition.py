@@ -13,6 +13,7 @@ sys.path.append('../../../')
 from arch.socket_arch.buffer import DaqDictRingBuffer, DaqPkgRingBuffer
 from arch.socket_arch.util import extract_channels, extract_devices
 from arch.socket_arch.segmentation import SegmentedByTrigger
+from arch.socket_arch.weigh import Weigh
 
 from daq_server import DaqRegister, DaqServer
 from daq_analyzer import DaqAnalyzer, DaqAsyncPlotter, DaqPlotter
@@ -98,16 +99,25 @@ def startup(sensors_groups):
             )
         )
 
+    """
     # View all signals ring buffer
     chart = DaqPlotter(samples_per_channel=samples_per_channel*2)
     client.append(chart)
+    """
 
     # View only segmented signals
-    """
     chart = DaqAsyncPlotter(
         samples_per_channel=samples_per_channel, tree_channels=tree_channels
     )
     client.append(chart)
+
+    def callback_process(data):
+        # call the weigh method
+        weight = Weigh.calculate(data)
+        # call the save method
+        #
+        # call chart method
+        chart.send(data)
 
     # Segmentation Module
     for name in channels:
@@ -118,10 +128,9 @@ def startup(sensors_groups):
                 trigger=sensors_groups[name]['trigger'],
                 chunk=samples_per_channel,
                 ring_buffer=DaqDictRingBuffer,
-                callback=chart.send
+                callback=callback_process
             )
         )
-    """
     loop(routines=server+client, wait=0.00000001)
 
 if __name__ == '__main__':
