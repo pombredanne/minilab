@@ -47,7 +47,7 @@ class AnalogContinuousTask():
         self.samples_per_channel = samples_per_channel
         self.number_of_channels = len(physical_channels)
         self.buffer_size = self.samples_per_channel * self.number_of_channels
-        self.buffer_daq_size = self.buffer_size * self.rate
+        self.buffer_daq_size = self.buffer_size * self.rate/4
 
         self.minv = minv
         self.maxv = maxv
@@ -141,15 +141,16 @@ class DigitalContinuousTask(object):
 
     def __init__(
         self,
-        physical_channels,
-        rate
+        physical_channels=[],
+        rate=1000.,
+        samples_per_channel=1000
     ):
         self.task = TaskHandle()
         self.physical_channels = physical_channels
         self.rate = rate
-        self.samples_per_channel = int(self.rate * 1)  # 2 second sampled
+        self.samples_per_channel = samples_per_channel
         self.buffer_size = self.samples_per_channel * len(physical_channels)
-        self.buffer_daq_size = self.buffer_size * self.rate
+        self.buffer_daq_size = self.buffer_size * self.rate/4
 
         if physical_channels:
             DAQmxCreateTask("", byref(self.task))

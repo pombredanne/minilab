@@ -6,7 +6,8 @@ from collections import defaultdict
 import asyncore
 import socket
 import sys
-import resource
+import platform
+import os
 
 sys.path.append('../../../')
 from arch.socket_arch.buffer import DaqDictRingBuffer, DaqPkgRingBuffer
@@ -16,12 +17,22 @@ from arch.socket_arch.segmentation import SegmentedByTrigger
 from daq_server import DaqRegister, DaqServer
 from daq_analyzer import DaqAnalyzer, DaqAsyncPlotter, DaqPlotter
 
+if platform.system() == 'linux':
+    import resource
+else:
+    import psutil
+
 
 def memory_usage():
     """
     Return memory usage in MB unity.
     """
-    return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/1024
+    if platform.system() == 'linux':
+        return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/1024
+    else:
+        process = psutil.Process(os.getpid())
+        return process.get_memory_info()[0]/float(2**20)
+
 
 
 def loop(routines=[], wait=0.):
@@ -72,7 +83,7 @@ def startup(sensors_groups):
         DaqPkgRingBuffer.bind(name, channels[name])
 
     for name in devices:
-        server.append(DaqRegister(devices[name], samples_per_channel))
+        server.append(DaqRegister(devices[name], samples_per_channel_read))
 
     # client analyzer configurations
     for name in channels:
@@ -88,9 +99,11 @@ def startup(sensors_groups):
         )
 
     # View all signals ring buffer
-    #chart = DaqPlotter(samples_per_channel=samples_per_channel)
+    chart = DaqPlotter(samples_per_channel=samples_per_channel*2)
+    client.append(chart)
 
     # View only segmented signals
+    """
     chart = DaqAsyncPlotter(
         samples_per_channel=samples_per_channel, tree_channels=tree_channels
     )
@@ -108,6 +121,7 @@ def startup(sensors_groups):
                 callback=chart.send
             )
         )
+    """
     loop(routines=server+client, wait=0.00000001)
 
 if __name__ == '__main__':

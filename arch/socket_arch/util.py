@@ -7,6 +7,8 @@ def extract_devices(sensors):
     _DEVICE = defaultdict(dict)
 
     for sensors_group in sensors:
+        if not sensors[sensors_group]['acquisition_mode']:
+            continue
         # analog channels
         for item in sensors[sensors_group]['channels']:
             for channel in sorted(item, key=lambda i: item[i]):
@@ -53,6 +55,9 @@ def extract_channels(sensors):
 
     for sensors_name in sensors:
         if sensors_name == 'temperature':
+            continue
+
+        if not sensors[sensors_name]['acquisition_mode']:
             continue
 
         # analog channels
