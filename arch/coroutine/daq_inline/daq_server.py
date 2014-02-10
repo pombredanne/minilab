@@ -26,13 +26,13 @@ class DaqRegister(object):
     """
     device = ''
 
-    def __init__(self, device):
+    def __init__(self, device={}, samples_per_channel=1000):
         """
 
         """
         self.device = device
 
-        self.daq = AcquisitionTask(device, 'continuous', 15000)
+        self.daq = AcquisitionTask(device, 'continuous', samples_per_channel)
         print('Device %s is initialized' % device['name'])
 
     def read(self):

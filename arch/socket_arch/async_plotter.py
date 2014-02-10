@@ -56,13 +56,12 @@ class DaqMultiPlotter():
                 ax.axis(cls.frame_limits)
                 ax.set_autoscale_on(False)
 
-                ax.plot(
-                    cls.time[:len(data[buffer_name][channel])],
-                    data[buffer_name][channel]
-                )
+                plt.grid()
+
+                ax.plot(cls.time, data[buffer_name][channel])
 
         plt.draw()
-        plt.pause(0.000001)
+        plt.pause(0.0000001)
 
     @classmethod
     def stop(cls):

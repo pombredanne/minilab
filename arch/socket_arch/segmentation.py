@@ -25,12 +25,14 @@ class SegmentationSignal(object):
             if 1 in ring_buffer.data[buffer_name][trigger]:
                 i = ring_buffer.data[buffer_name][trigger].index(1)
 
+                if i + chunk >= ring_buffer.max_samples_per_channel:
+                    continue
+
                 segmented_data = ring_buffer.extract(
                     buffer_name=buffer_name, chunk=i+chunk, start_index=i
                 )
 
             if segmented_data:
-                print('send new data ' + buffer_name)
                 callback({buffer_name: segmented_data})
 
 

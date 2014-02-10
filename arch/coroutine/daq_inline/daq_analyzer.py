@@ -87,7 +87,7 @@ class DaqPlotter():
 
     def read(self):
         if DaqAsyncTurn.is_my_turn(self.name):
-            data = DaqDictRingBuffer.extract(chunk=self.samples_per_channel)
+            data = DaqDictRingBuffer.tolist()
 
             DaqMultiPlotter.send_data(data)
 

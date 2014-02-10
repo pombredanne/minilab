@@ -14,7 +14,7 @@ from arch.socket_arch.util import extract_channels, extract_devices
 from arch.socket_arch.segmentation import SegmentedByTrigger
 
 from daq_server import DaqRegister, DaqServer
-from daq_analyzer import DaqAnalyzer, DaqAsyncPlotter
+from daq_analyzer import DaqAnalyzer, DaqAsyncPlotter, DaqPlotter
 
 
 def memory_usage():
@@ -36,7 +36,7 @@ def loop(routines=[], wait=0.):
     """
     while True:
         for routine in routines:
-            if memory_usage() >= 1024:
+            if memory_usage() >= 1280:
                 raise Exception('Memory usage exceed.')
             routine.read()
             sleep(wait)
@@ -49,8 +49,12 @@ def startup(sensors_groups):
     server = []
     client = []
 
+    # total samples per channel
     samples_per_channel = 15000
-    packages_per_channel = 100
+    # samples per channel per each read access
+    samples_per_channel_read = 1000
+    # quantity of package of data to be buffered
+    packages_per_channel = 1
 
     devices = extract_devices(sensors_groups)
     channels = extract_channels(sensors_groups)
@@ -58,7 +62,7 @@ def startup(sensors_groups):
 
     DaqPkgRingBuffer.configure(packages_per_channel, 0.0)
     DaqDictRingBuffer.configure(
-        max_samples_per_channel=samples_per_channel*3,
+        max_samples_per_channel=samples_per_channel*2,
         nothing_value=0,
         overwritten_exception=False
     )
@@ -68,7 +72,7 @@ def startup(sensors_groups):
         DaqPkgRingBuffer.bind(name, channels[name])
 
     for name in devices:
-        server.append(DaqRegister(devices[name]))
+        server.append(DaqRegister(devices[name], samples_per_channel))
 
     # client analyzer configurations
     for name in channels:
@@ -83,6 +87,10 @@ def startup(sensors_groups):
             )
         )
 
+    # View all signals ring buffer
+    #chart = DaqPlotter(samples_per_channel=samples_per_channel)
+
+    # View only segmented signals
     chart = DaqAsyncPlotter(
         samples_per_channel=samples_per_channel, tree_channels=tree_channels
     )
@@ -90,19 +98,17 @@ def startup(sensors_groups):
 
     # Segmentation Module
     for name in channels:
-        #print(channels[name])
-        #print(sensors_groups[name]['trigger'])
         client.append(
             SegmentedByTrigger(
                 buffer_name=name,
                 channels=channels[name],
                 trigger=sensors_groups[name]['trigger'],
-                chunk=15000,
+                chunk=samples_per_channel,
                 ring_buffer=DaqDictRingBuffer,
                 callback=chart.send
             )
         )
-    loop(server+client)
+    loop(routines=server+client, wait=0.00000001)
 
 if __name__ == '__main__':
     def test():

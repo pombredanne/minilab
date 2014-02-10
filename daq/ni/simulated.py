@@ -5,25 +5,35 @@ Created on Tue Oct  8 16:11:48 2013
 @author: ivan
 """
 from __future__ import print_function, division
-from random import random, randint
+from random import random, randint, shuffle
 from collections import defaultdict
 
 import numpy as np
 
 
-def digital_generator():
-    return randint(0, 1)
+def digital_wave(channels=[], samples_per_channel=1000):
+    t = [0]*(samples_per_channel-100) + [1]*100
+
+    result = []
+    while True:
+        for position in xrange(0, samples_per_channel, 1000):
+            result[:] = []
+            for k, ch in enumerate(channels):
+                shuffle(t)
+                result += list(t)
+
+            yield result
 
 
 def sin_wave(channels=[], samples_per_channel=1000):
     t = np.linspace(0, 1, samples_per_channel)
 
     data_size = t.size
-    amplitude = 10  # Amplitude
 
     result = []
     while True:
         for position in xrange(0, samples_per_channel, 1):
+            amplitude = randint(1, 10)  # Amplitude
             result[:] = []
             for k, ch in enumerate(channels):
                 data = list(t[position:data_size]) + list(t[0:position])
@@ -218,6 +228,7 @@ class DigitalSimulatedTask(object):
     samples_per_channel = None
     buffer_size = None
     buffer_daq_size = None
+    digital_generator = None
 
     def __init__(
         self,
@@ -231,6 +242,11 @@ class DigitalSimulatedTask(object):
         self.buffer_size = samples_per_channel * len(physical_channels)
         self.buffer_daq_size = (
             samples_per_channel * len(physical_channels) * rate
+        )
+
+        self.digital_generator = digital_wave(
+            channels=self.physical_channels,
+            samples_per_channel=self.samples_per_channel
         )
 
     def read(self):
@@ -250,14 +266,7 @@ class DigitalSimulatedTask(object):
         return result
 
     def _read(self):
-        """
-
-        """
-        data = np.zeros((self.buffer_size,), dtype=np.uint8)
-        for x in xrange(self.buffer_size):
-            data[x] = digital_generator()
-
-        return data
+        return self.digital_generator.next()
 
     def close(self):
         """
