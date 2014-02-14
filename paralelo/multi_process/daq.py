@@ -57,17 +57,26 @@ class BufferRing(object):
         return data
 
 
-def daq(*args):
+def process_daq(daq):
+    return daq.read()
+
+
+class DAQ(object):
     """
 
     """
-    dev = args[0]
+    def __init__(self, name):
+        self.name = name
 
-    result = {}
-    for i in xrange(32):
-        result[i] = list(np.random.random(1000))
+    def read(self, *args):
+        """
 
-    return dev, result
+        """
+        result = {}
+        for i in xrange(32):
+            result[i] = list(np.random.random(1000))
+
+        return self.name, result
 
 
 if __name__ == "__main__":
@@ -75,10 +84,10 @@ if __name__ == "__main__":
 
     bf = BufferRing()
 
-    threads.append('Dev1')
-    threads.append('Dev2')
-    threads.append('Dev4')
-    threads.append('Dev5')
+    threads.append(DAQ('Dev1'))
+    threads.append(DAQ('Dev2'))
+    threads.append(DAQ('Dev4'))
+    threads.append(DAQ('Dev5'))
 
     mplt = plotter(data_size=1000)
     mplt.next()
@@ -90,9 +99,11 @@ if __name__ == "__main__":
         if memory_usage() > 1280:
             raise Exception('Memory usage exceed 1GB.')
 
-        start_time = time.time()
-        data = dict(pool.map(daq, threads))
-        print('%f' % (time.time() - start_time), end=' - ')
+        time_0 = time.time()
+        data = dict(pool.map(process_daq, threads))
+        time_1 = time.time()
+        print('%f' % (time_1 - time_0), end=' - ')
         bf.append(data)
         mplt.send(bf.extract())
-        print('%f' % (time.time() - start_time))
+        print('%f' % (time.time() - time_1), end=' - ')
+        print('%f' % (time.time() - time_0))
