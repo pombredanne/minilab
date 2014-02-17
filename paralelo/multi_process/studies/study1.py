@@ -2,15 +2,21 @@
 """
 Consideraciones:
 
-1 - Con la estructura normal no se puede pasar un método como referencia:
+1 - Pool
+Con la estructura normal no se puede pasar un método como referencia:
  -> result = pool.apply_async(_c.f, [10])
  -> pool.map(_c.f, range(10))
- Error info: PicklingError: Can't pickle
- <type 'instancemethod'>: attribute lookup
- __builtin__.instancemethod failed
+    Error info: PicklingError: Can't pickle
+    <type 'instancemethod'>: attribute lookup
+    __builtin__.instancemethod failed
 
  Este problema se da por la incompatibilid en pickle, que
  necesita de que las variables estén definidas como globales.
+
+ Otro problema que puede suceder es cuando la clase utiliza generators:
+  -> pool.map(run_server, servers)
+     PicklingError: Can't pickle <type 'generator'>:
+     attribute lookup __builtin__.generator failed
 
  Soluciones:
 
@@ -25,9 +31,9 @@ Consideraciones:
    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]).
 
 
-Process y Queues
- Procesos y queues funcionan bien con objetos:
- - p = Process(target=g, args=(q, daq))  # q = Queue(), daq = DAQ(), g is a def
+2 - Process y Queues
+Procesos y queues funcionan bien con objetos:
+ -> p = Process(target=g, args=(q, daq))  # q=Queue(), daq=DAQ(), g is a def
 
 
 """

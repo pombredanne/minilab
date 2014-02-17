@@ -11,21 +11,17 @@ import os
 import sys
 
 sys.path.insert(0, '/var/www/mswim/')
+sys.path.insert(1, os.getcwd())
 
-from acquisition.util.buffer import DaqDictRingBuffer, DaqPkgRingBuffer
+from buffer import DaqBuffer
 from acquisition.util.daq_util import extract_channels, extract_devices
 
-from acquisition.segmentation import SegmentedByTrigger
+from segmentation import SegmentedByTrigger
 from acquisition.weigh import Weigh
 
-from arch.multi_process.daq_arch.daq_server import DaqRegister, DaqServer
-from arch.multi_process.daq_arch.daq_analyzer import DaqAnalyzer, DaqAsyncPlotter, DaqPlotter
+from arch.multi_process.daq_arch.daq_server import DaqRegister
 
 from mswim.apps.acquisition.models import save_acquisition_data
-
-SERVER = []
-CLIENT = []
-PROCESS = []
 
 
 def memory_usage():
@@ -36,36 +32,58 @@ def memory_usage():
     return process.get_memory_info()[0] / float(2 ** 20)
 
 
-def run_server(pid):
-    return SERVER[pid].read()
+def callback_process(group_name, data, sensors_groups):
+        # TODO: Re-factor it
+        group_channels = sensors_groups['channels']
+
+        temperature_channels = dict(
+            [(str(v), i) for i, v in
+             sensors_groups['temperature_channels'][0].items()
+            ]
+        )
+
+        # call the weigh method
+        t_0 = time.time()
+        #weight = Weigh.calculate({group_name: data})
+        print('ok')
+        t_1 = time.time()
+        print('Weigh Calc Time: %f' % (t_1 - t_0), end=' - ')
+        # call the save method
+        #save_acquisition_data(data, group_channels, temperature_channels)
+        t_2 = time.time()
+        print('Save Time: %f' % (t_2 - t_1))
+        # call chart method
+        # chart.send(data)
+        return
 
 
-def run_client(pid):
-    return CLIENT[pid].read()
+def run_server(server):
+    return server.read()
 
 
-def run_process(pid):
-    return PROCESS[pid].read()
+def segmentation_check(args):
+    client, daq_buffer = args[0], args[1]
+    return client.check(daq_buffer)
 
 
-def loop(servers=[], clients=[], processes=[], wait=0.):
+def segmentation_save(args):
+    client, segmented_data = args[0], args[1]
+    return client.callback(segmented_data, client.sensors_group)
+
+
+def loop(servers=[], clients=[], wait=0., daq_buffer=None):
     """
-    Loop of routines using coroutines structure
+    Loop of routines
 
     @param routines: List of functions
     @type routines: object
     @param wait: Seconds to wait after each function called
     @type wait: float
+    @param daq_buffer: DaqBuffer instance
+    @type daq_buffer: DaqBuffer
 
     """
     print('Starting acquisition.')
-    SERVER[:] = servers
-    CLIENT[:] = clients
-    PROCESS[:] = processes
-
-    servers_range = range(len(servers))
-    clients_range = range(len(clients))
-    processes_range = range(len(processes))
 
     pool = Pool(processes=10)  # start 4 worker processes
 
@@ -75,9 +93,25 @@ def loop(servers=[], clients=[], processes=[], wait=0.):
 
         time_0 = time.time()
 
-        pool.map(run_server, servers_range)
-        pool.map(run_client, clients_range)
-        pool.map(run_process, processes_range)
+        # Run acquisitions routines
+        daq_buffer.append(pool.map(run_server, servers))
+
+        # Look for trigger signal
+        indexes = dict(pool.map(
+            segmentation_check,
+            map(lambda c: (c, daq_buffer.view(c.buffer_name)), clients)
+        ))
+
+        # Save segmented data
+        if any(indexes.values()):
+            clients_filtered = filter(lambda c: indexes[c.buffer_name], clients)
+            m = map(
+                lambda c: (
+                    c,
+                    daq_buffer.extract(c.buffer_name, indexes[c.buffer_name])
+                ), clients_filtered
+            )
+            pool.map(segmentation_save, m)
 
         print('%f' % (time.time() - time_0))
         time.sleep(wait)
@@ -95,44 +129,20 @@ def startup(sensors_groups):
     samples_per_channel = 15000
     # samples per channel per each read access
     samples_per_channel_read = 1000
-    # quantity of package of data to be buffered
-    packages_per_channel = 100
 
     devices = extract_devices(sensors_groups)
     channels = extract_channels(sensors_groups)
-    tree_channels = defaultdict(dict)
 
-    DaqPkgRingBuffer.configure(packages_per_channel, 0.0)
-    DaqDictRingBuffer.configure(
-        max_samples_per_channel=samples_per_channel * 2,
-        nothing_value=0,
-        overwritten_exception=False
-    )
-
-    # Server DAQ configurations
-    for name in channels:
-        DaqPkgRingBuffer.bind(name, channels[name])
+    bf = DaqBuffer(channels, samples_per_channel*10)
 
     for name in devices:
         server.append(DaqRegister(devices[name], samples_per_channel_read))
 
-    # Client analyzer configurations
-    for name in channels:
-        tree_channels[name] = dict([(ch, None) for ch in channels[name]])
-        DaqDictRingBuffer.bind(name, channels[name])
-
-        client.append(
-            DaqAnalyzer(
-                channels=channels[name],
-                daq_name=name,
-                server=DaqServer.listening(channels[name], name)
-            )
-        )
-
-
+    """
     # View all signals ring buffer
     chart = DaqPlotter(samples_per_channel=samples_per_channel*2)
     process.append(chart)
+    """
 
 
     # View only segmented signals
@@ -143,9 +153,8 @@ def startup(sensors_groups):
     client.append(chart)
     """
 
-    def callback_process(data):
+    def callback_process_in(group_name, data):
         # TODO: Re-factor it
-        group_name = data.keys()[0]
         group_channels = sensors_groups[group_name]['channels']
 
         temperature_channels = dict(
@@ -154,14 +163,20 @@ def startup(sensors_groups):
             ]
         )
 
+
         # call the weigh method
-        weight = Weigh.calculate(data)
+        t_0 = time.time()
+        weight = Weigh.calculate({group_name: data})
+        t_1 = time.time()
+        print('Weigh Calc Time: %f' % (t_1 - t_0), end=' - ')
         # call the save method
         save_acquisition_data(data, group_channels, temperature_channels)
+        t_2 = time.time()
+        print('Save Time: %f' % (t_2 - t_1))
         # call chart method
         # chart.send(data)
+        return
 
-    """
     # Segmentation Module
     for name in channels:
         if not sensors_groups[name]['trigger']:
@@ -173,13 +188,18 @@ def startup(sensors_groups):
                 channels=channels[name],
                 trigger=sensors_groups[name]['trigger'],
                 chunk=samples_per_channel,
-                ring_buffer=DaqDictRingBuffer,
-                callback=callback_process
+                callback=callback_process,
+                sensors_group=sensors_groups[name]
             )
         )
-    """
+
     try:
-        loop(servers=server, clients=client, processes=process, wait=0.0001)
+        loop(
+            servers=server,
+            clients=client,
+            wait=0.0001,
+            daq_buffer=bf
+        )
     except KeyboardInterrupt:
         print('\nAcquisition was closed.')
         exit()

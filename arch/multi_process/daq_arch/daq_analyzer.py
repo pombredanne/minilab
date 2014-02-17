@@ -47,29 +47,6 @@ class DaqAsyncTurn(object):
         )
 
 
-class DaqAnalyzer(object):
-    """
-
-    """
-    def __init__(self, server=lambda x: x, channels=[], daq_name=''):
-        """
-        Analyze data from the server
-        """
-        self.channels = channels
-        self.server = server
-        self.internal_id = randint(0, 1000000)
-        self.name = daq_name
-
-        DaqAsyncTurn.bind(self.name)
-
-    def read(self):
-        if DaqAsyncTurn.is_my_turn(self.name):
-            data = self.server.next()
-
-            DaqDictRingBuffer.append(self.name, data)
-            DaqAsyncTurn.next_turn()
-
-
 class DaqPlotter():
     """
 
@@ -142,8 +119,6 @@ if __name__ == '__main__':
         for name in groups:
             DaqDictRingBuffer.bind(name, channels[name])
 
-        ceramic = DaqAnalyzer('localhost', 65000, channels['ceramic'], 'ceramic')
-        polymer = DaqAnalyzer('localhost', 65000, channels['polymer'], 'polymer')
         plotter = DaqPlotter(samples_per_channel=samples_per_channel)
 
         asyncore.loop()

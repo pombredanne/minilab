@@ -15,9 +15,8 @@ import platform
 # internal
 sys.path.append('../../../')
 from daq.ni.acquisition import AcquisitionTask
-from arch.socket_arch.util import extract_devices, extract_channels
-from arch.socket_arch.buffer import DaqPkgRingBuffer
 
+DAQ = []
 
 class DaqRegister(object):
     """
@@ -25,60 +24,17 @@ class DaqRegister(object):
 
     """
     device = ''
+    daq_id = None
 
     def __init__(self, device={}, samples_per_channel=1000):
         """
 
         """
         self.device = device
+        self.daq_id = len(DAQ)
 
-        self.daq = AcquisitionTask(device, 'continuous', samples_per_channel)
+        DAQ.append(AcquisitionTask(device, 'continuous', samples_per_channel))
         print('Device %s is initialized' % device['name'])
 
     def read(self):
-        print('>>')
-        DaqPkgRingBuffer.append(self.daq.read())
-        return True
-
-
-class DaqServer(object):
-    """
-    Connect client with server using coroutine method listening
-
-    """
-    @classmethod
-    def listening(cls, channels, daq_id):
-        while True:
-            print('>>')
-            yield DaqPkgRingBuffer.extract_data(daq_id)
-
-if __name__ == '__main__':
-    def startup(sensors_groups, host='localhost', port=65000):
-        """
-
-        """
-        server = []
-
-        devices = extract_devices(sensors_groups)
-        channels = extract_channels(sensors_groups)
-        DaqPkgRingBuffer.configure(100, 0.0)
-
-        for name in channels:
-            DaqPkgRingBuffer.bind(name, channels[name])
-
-        for name in devices:
-            server.append(DaqRegister(devices[name]))
-
-        server.append(DaqServer(host, port))
-
-        asyncore.loop(0.5)
-
-    # internal
-    if platform.system() == 'Linux':
-        sys.path.append('/var/www/mswim/')
-    else:
-        sys.path.append('c:/mswim/')
-
-    from mswim.settings import DEVICES as SENSORS_GROUP
-
-    startup(SENSORS_GROUP)
+        return DAQ[self.daq_id].read()
