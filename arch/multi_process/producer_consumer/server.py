@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Async module to server data from Acquisition Tasks through Ring Buffers
+Module to server access to Acquisition Tasks
 
 """
 from __future__ import print_function, division
@@ -16,7 +16,6 @@ import platform
 sys.path.append('../../../')
 from daq.ni.acquisition import AcquisitionTask
 
-DAQ = []
 
 class DaqRegister(object):
     """
@@ -24,17 +23,18 @@ class DaqRegister(object):
 
     """
     device = ''
-    daq_id = None
+    name = None
+    daq = None
 
     def __init__(self, device={}, samples_per_channel=1000):
         """
 
         """
         self.device = device
-        self.daq_id = len(DAQ)
+        self.name = device['name']
 
-        DAQ.append(AcquisitionTask(device, 'continuous', samples_per_channel))
+        self.daq = AcquisitionTask(device, 'continuous', samples_per_channel)
         print('Device %s is initialized' % device['name'])
 
     def read(self):
-        return DAQ[self.daq_id].read()
+        return self.daq.read()

@@ -14,7 +14,7 @@ import platform
 
 # internal
 sys.path.append('../../../')
-from daq.ni.acquisition import AcquisitionTask
+from acq_daq.ni.acquisition import AcquisitionTask
 from arch.socket_arch.util import extract_devices, extract_channels
 from arch.socket_arch.buffer import DaqPkgRingBuffer
 

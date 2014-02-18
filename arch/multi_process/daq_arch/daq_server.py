@@ -14,7 +14,7 @@ import platform
 
 # internal
 sys.path.append('../../../')
-from daq.ni.acquisition import AcquisitionTask
+from acq_daq.ni.acquisition import AcquisitionTask
 
 DAQ = []
 

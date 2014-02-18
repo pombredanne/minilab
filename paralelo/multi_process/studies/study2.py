@@ -1,3 +1,7 @@
+"""
+Consumer and Producer structure
+
+"""
 from __future__ import print_function, division
 from collections import defaultdict
 from matplotlib import pyplot as plt

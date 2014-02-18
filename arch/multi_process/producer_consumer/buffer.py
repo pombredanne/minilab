@@ -85,6 +85,7 @@ class DaqBuffer(object):
 
                     self.data[channel_name][group_name] += item[channel_name]
 
+
     def extract(self, group_name, start=None, end=None):
         """
         Extract data in the range(start, end) from buffer
