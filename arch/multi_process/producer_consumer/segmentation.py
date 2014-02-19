@@ -3,52 +3,30 @@ from __future__ import print_function, division
 from acquisition.util.buffer import DaqDictRingBuffer
 from collections import defaultdict
 
-CALLBACK = []
+class SegmentTask(object):
+    chunk = None
 
-class SegmentedByTrigger(object):
-    """
-
-    """
-    buffer_name=''
-    channels=[]
-    trigger=''
-    chunk=0
-    ring_buffer=None
-    callback=None
-
-    def __init__(
-        self,
-        buffer_name='',
-        channels=[],
-        sensors_group={},
-        trigger='',
-        chunk=15000,
-        callback=(lambda x: x)
-    ):
-        """
-
-        """
-        self.callback_id = len(CALLBACK)
-        self.buffer_name = buffer_name
-        self.channels = channels
-        self.trigger = trigger
+    def __init__(self, chunk=0, sensors=None):
         self.chunk = chunk
-        self.sensors_group = sensors_group
-        CALLBACK.append(callback)
+        self.sensors = sensors
 
-    def check(self, data):
-        """
+    def __call__(self, daq_buffer):
+        result = {}
+        for sensor_id, sensor in self.sensors.items():
+            # ex. sensor_id: polymer, ceramic, etc
+            trigger_data = daq_buffer.view(sensor_id)[
+                sensor['trigger']
+            ]
 
-        """
-        if 1 in data[self.trigger]:
-            i = data[self.trigger].index(1)
+            data_size = len(trigger_data)
 
-            if i is None or i + self.chunk >= len(data[self.trigger]):
-                return self.buffer_name, None
+            try:
+                i = trigger_data.index(1)
+            except ValueError:
+                return None
 
-            return self.buffer_name, i
+            if i + self.chunk > data_size:
+                return None
 
-    def callback(self, segmented_data, sensors_group):
-        CALLBACK[self.callback_id](
-            self.buffer_name, segmented_data, sensors_group
-        )
+            result[sensor_id] = daq_buffer.extract(sensor_id, i, i+self.chunk)
+        return result

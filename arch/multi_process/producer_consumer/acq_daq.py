@@ -24,7 +24,8 @@ from acquisition.util.daq_util import (
     extract_all_channels, extract_channels, extract_devices
 )
 
-from mswim.apps.acquisition.models import save_acquisition_data
+from save import save_acquisition_data
+from segmentation import SegmentTask
 
 
 class Consumer(multiprocessing.Process):
@@ -63,36 +64,7 @@ class Consumer(multiprocessing.Process):
         return
 
 
-class SegmentTask(object):
-    chunk = None
-
-    def __init__(self, chunk=0, sensors=None):
-        self.chunk = chunk
-        self.sensors = sensors
-
-    def __call__(self, daq_buffer):
-        result = {}
-        for sensor_id, sensor in self.sensors.items():
-            # ex. sensor_id: polymer, ceramic, etc
-            trigger_data = daq_buffer.view(sensor_id)[
-                sensor['trigger']
-            ]
-
-            data_size = len(trigger_data)
-
-            try:
-                i = trigger_data.index(1)
-            except ValueError:
-                return None
-
-            if i + self.chunk > data_size:
-                return None
-
-            result[sensor_id] = daq_buffer.extract(sensor_id, i, i+self.chunk)
-        return result
-
-
-def start_acquisition(sensors_settings):
+def start_acquisition(sensors_settings, dsn):
     tasks = multiprocessing.JoinableQueue()
     results = multiprocessing.Queue()
 
@@ -102,7 +74,7 @@ def start_acquisition(sensors_settings):
 
     pool = Pool(processes=4)
 
-    chunk = 1000
+    chunk = 15000
 
     segmented_task = SegmentTask(
         chunk=chunk,
@@ -138,12 +110,15 @@ def start_acquisition(sensors_settings):
         segmented_data = segmented_task(daq_buffer)
 
         if segmented_data:
+            """
+            data={}, channels=[], sensors_settings={},
+            weight_data={}, dsn='', schema=''
+            """
             pool.apply_async(
                 save_acquisition_data,
                 args=(
-                    segmented_data,
-                    channels,
-                    sensors_settings
+                    segmented_data, channels, sensors_settings,
+                    {}, dsn, 'mswim'
                 )
             )
             plot_task.plot(segmented_data)
@@ -155,9 +130,7 @@ if __name__ == '__main__':
 
     from mswim.settings import DEVICES as SENSORS_GROUP
     from mswim.libs.db import conn
-
-    # active the database connection
-    conn.Pool.connect()
+    from mswim import settings
 
     # REMOVE GROUPS WITH ACQUISITION EQUAL TO FALSE
     _sensors_settings = {}
@@ -165,4 +138,4 @@ if __name__ == '__main__':
         if SENSORS_GROUP[i]['acquisition_mode']:
             _sensors_settings[i] = SENSORS_GROUP[i]
 
-    start_acquisition(_sensors_settings)
+    start_acquisition(_sensors_settings, conn.Pool.dsn(settings))
