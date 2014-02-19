@@ -20,8 +20,8 @@ from plotter import PlotTask
 sys.path.insert(0, '/var/www/mswim/')
 sys.path.insert(1, os.getcwd())
 
-from acquisition.util.daq_util import (
-    extract_all_channels, extract_channels, extract_devices
+from libs import (
+    extract_all_channels, extract_channels, extract_devices, memory_usage
 )
 
 from save import save_acquisition_data
@@ -103,6 +103,9 @@ def start_acquisition(sensors_settings, dsn):
 
     # loop
     while True:
+        if memory_usage() > 1280:
+            raise Exception('Memory usage exceeded.')
+
         for _ in range(process_n):
             tasks.put(True)
             daq_buffer.append(results.get())
