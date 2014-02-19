@@ -74,21 +74,22 @@ def start_acquisition(sensors_settings, dsn):
 
     pool = Pool(processes=4)
 
-    chunk = 15000
+    chunk = 1000
+    segmented_size = 15000
 
     segmented_task = SegmentTask(
-        chunk=chunk,
+        chunk=segmented_size,
         sensors=sensors_settings
     )
 
     daq_buffer = DaqBuffer(
         sensors_groups=all_channels,
-        limit_per_channel=chunk*100
+        limit_per_channel=segmented_size*10
     )
 
     plot_task = PlotTask(
         channels=sensors_settings,
-        data_size=chunk
+        data_size=segmented_size
     )
 
     consumers = [

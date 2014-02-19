@@ -23,6 +23,7 @@ in a Python list.
 This example is also an example for the object oriented uses of PyDAQmx
 """
 
+
 def calc_time(delta_t, N):
     _ts = datetime.now()
 
@@ -33,6 +34,7 @@ def calc_time(delta_t, N):
 
     return [nexttime(_ts) for _ in range(N)]
 
+
 class AcquisitionCallbackTask(Task):
     """
 
@@ -40,7 +42,10 @@ class AcquisitionCallbackTask(Task):
     data = None
     a = None
 
-    def __init__(self, physicalChannel=[], rate=1.0, minv=-5.0, maxv=5.0):
+    def __init__(
+            self, physicalChannel=[], rate=1.0, minv=-5.0, maxv=5.0,
+            acquisition_type='analog'
+    ):
         """
 
         """
@@ -111,7 +116,10 @@ class AcquisitionCallbackTask(Task):
 
     def EveryNCallback(self):
         read = int32()
-        self.data = zeros(self.bufferSize)
+        num_bytes = int32()
+
+        self.data = zeros(self.bufferSize, dtype=numpy.float64)
+        digital_data = zeros(self.bufferSize, dtype=numpy.uint8)
 
         '''int32 DAQmxReadAnalogF64 (
             tasksHandle tasksHandle,
@@ -131,6 +139,11 @@ class AcquisitionCallbackTask(Task):
             self.data, self.data.size, byref(read), None
         )
 
+        self.ReadDigitalLines(
+            self.samplesPerChannel, 10.0, DAQmx_Val_GroupByChannel,
+            digital_data, self.data.size, byref(read), byref(num_bytes), None
+        )
+
         _timing = calc_time(
             timedelta(seconds=1/self.samplesPerChannel),
             self.samplesPerChannel)
@@ -139,10 +152,10 @@ class AcquisitionCallbackTask(Task):
         # self.a.extend([self.data.tolist(), _timing])
 
         plt.clf()
-        #ax = plt.subplot(111)
-        #ax.set_xscale('log')
-        #formatter = EngFormatter(unit='t', places=1)
-        #ax.xaxis.set_major_formatter(formatter)
+        ax = plt.subplot(111)
+        ax.set_xscale('log')
+        formatter = EngFormatter(unit='t', places=1)
+        ax.xaxis.set_major_formatter(formatter)
         plt.plot(self.data[:self.samplesPerChannel])
         plt.plot(self.data[self.samplesPerChannel:self.samplesPerChannel*2])
         plt.plot(self.data[self.samplesPerChannel*2:self.samplesPerChannel*3])
@@ -161,11 +174,121 @@ class AcquisitionCallbackTask(Task):
     def run(self):
         self.StartTask()
 
-        try:
-            plt.ion()
-            plt.show()
-        except:
-            pass
+    def stop(self):
+        self.StopTask()
+        self.ClearTask()
+
+        print('Acquisition stopped')
+
+
+class DigitalAcquisitionCallbackTask(Task):
+    """
+
+    """
+    data = None
+    a = None
+
+    def __init__(self, physicalChannel=[], rate=1.0):
+        """
+
+        """
+        Task.__init__(self)
+
+        self.device_name = physicalChannel[0].split('/')[0]
+
+        self.rate = rate
+        self.samplesPerChannel = int(rate)
+
+        self.bufferSize = len(physicalChannel) * self.samplesPerChannel
+        self.numberOfChannel = physicalChannel.__len__()
+
+        if isinstance(physicalChannel, str):
+            self.physicalChannel = [physicalChannel]
+        else:
+            self.physicalChannel = physicalChannel
+
+        self.a = []
+        self.CreateDIChan(
+            ','.join(physicalChannel), "", DAQmx_Val_ChanForAllLines
+        )
+
+        # scaling the buffer size
+        DAQmxCfgInputBuffer(self.taskHandle, self.bufferSize);
+
+        '''int32 DAQmxCfgSampClkTiming (
+            tasksHandle tasksHandle,
+            const char source[],
+            float64 rate,
+            int32 activeEdge,
+            int32 sampleMode,
+            uInt64 sampsPerChanToAcquire
+        );'''
+        self.CfgSampClkTiming(
+            'di/SampleClock', rate, DAQmx_Val_Rising,
+            DAQmx_Val_ContSamps, self.samplesPerChannel
+        )
+
+        '''DAQmxRegisterEveryNSamplesEvent (
+            TaskHandle task,
+            int32 everyNsamplesEventType,
+            uInt32 nSamples,
+            uInt32 options,
+            DAQmxEveryNSamplesEventCallbackPtr callbackFunction,
+            void *callbackData
+        );'''
+        self.AutoRegisterEveryNSamplesEvent(
+            DAQmx_Val_Acquired_Into_Buffer, self.samplesPerChannel, 0
+        )
+        self.AutoRegisterDoneEvent(0)
+
+    def EveryNCallback(self):
+        read = int32()
+        num_bytes = int32()
+
+        digital_data = zeros(self.bufferSize, dtype=numpy.uint8)
+
+        '''int32 DAQmxReadAnalogF64 (
+            tasksHandle tasksHandle,
+            int32 numSampsPerChan,
+            float64 timeout,
+            bool32 fillMode,
+            float64 readArray[],
+            uInt32 arraySizeInSamps,
+            int32 *sampsPerChanRead,
+            bool32 *reserved
+        );'''
+
+        self.ReadDigitalLines(
+            self.samplesPerChannel, 10.0, DAQmx_Val_GroupByChannel,
+            digital_data, self.data.size, byref(read), byref(num_bytes), None
+        )
+
+        _timing = calc_time(
+            timedelta(seconds=1/self.samplesPerChannel),
+            self.samplesPerChannel)
+
+        # Create a ringbuffer or a temporary file to be used for other program
+        # self.a.extend([self.data.tolist(), _timing])
+
+        plt.clf()
+        ax = plt.subplot(111)
+        ax.set_xscale('log')
+        formatter = EngFormatter(unit='t', places=1)
+        ax.xaxis.set_major_formatter(formatter)
+        plt.plot(self.data[:self.samplesPerChannel])
+
+        plt.axis([0, self.samplesPerChannel-2, -2, 5])
+        plt.grid()
+        plt.draw()
+
+        return 0  # The function should return an integer
+
+    def DoneCallback(self, status):
+        print("Status", status.value)
+        return 0  # The function should return an integer
+
+    def run(self):
+        self.StartTask()
 
     def stop(self):
         self.StopTask()
@@ -174,20 +297,45 @@ class AcquisitionCallbackTask(Task):
         print('Acquisition stopped')
 
 
-def test():
+class DaqPlotter(object):
+    data = {}
+
+    def __init__(self, devices, chunk):
+        for d_name in devices:
+            self.data[d_name] = [0]*chunk
+
+
+def main():
     terminals = {}
 
-    dev1 = ['Dev1/ai%s' % line for line in range(0, 4)]
+    dev1_analog = ['Dev1/ai%s' % line for line in range(0, 4)]
+    dev1_digital = ['Dev1/port0/line0']
+
+
     dev2 = ['Dev2/ai%s' % line for line in range(0, 4)]
 
+    rate = 5000.
+
+    plotter = DaqPlotter(['Dev1', 'Dev2'], int(rate))
+
+    """
     task_dev1 = AcquisitionCallbackTask(
-        physicalChannel=dev2, rate=5000., minv=-5.0, maxv=5.0
+        physicalChannel=dev1, rate=rate, minv=-5.0, maxv=5.0,
+        trigger='Dev1/di0'
     )
-    '''
+
     task_dev2 = AcquisitionCallbackTask(
-        physicalChannel=dev2, rate=5000., minv=-5.0, maxv=5.0
+        physicalChannel=dev2, rate=rate, minv=-5.0, maxv=5.0,
+        trigger='Dev1/di1'
     )
-    '''
+    """
+
+    task_dev1 = DigitalAcquisitionCallbackTask(
+        physicalChannel=dev1_digital, rate=rate
+    )
+
+    plt.ion()
+    plt.show()
 
     task_dev1.run()
     #task_dev2.run()
@@ -199,8 +347,8 @@ def test():
             break
 
     task_dev1.stop()
-
     #task_dev2.stop()
+    plt.stop()
 
 if __name__ == '__main__':
-    test()
+    main()

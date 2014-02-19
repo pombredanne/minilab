@@ -5,6 +5,7 @@ from time import sleep
 from simulated import DigitalSimulatedTask, AnalogSimulatedTask
 
 try:
+    from simulated import DigitalSimulatedTask, AnalogSimulatedTask
     from continuous import DigitalContinuousTask, AnalogContinuousTask
 except:
     from simulated import DigitalSimulatedTask as DigitalContinuousTask
@@ -101,6 +102,10 @@ class AcquisitionTask():
                     sensors[chan_i] = []
                 sensors[chan_i] += [sensor_voltage]
         return sensors
+
+    def run(self):
+        self.analog_task.run()
+        self.analog_task.run()
 
     def close(self):
         """
