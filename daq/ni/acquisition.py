@@ -1,27 +1,15 @@
 from __future__ import print_function
-from datetime import datetime
 from collections import defaultdict
 from time import sleep
+
 from simulated import DigitalSimulatedTask, AnalogSimulatedTask
+from callback import CallbackTask
 
 try:
-    from simulated import DigitalSimulatedTask, AnalogSimulatedTask
     from continuous import DigitalContinuousTask, AnalogContinuousTask
-    from callback import DigitalCallbackTask, AnalogCallbackTask
 except Exception as e:
     from simulated import DigitalSimulatedTask as DigitalContinuousTask
     from simulated import AnalogSimulatedTask as AnalogContinuousTask
-
-
-def calculate_time_sequence(delta_t, quantity):
-    timestamp = [datetime.now()]
-
-    def next_time(_timestamp):
-        _ts = _timestamp[0]
-        _timestamp[0] += delta_t
-        return _ts
-
-    return [next_time(timestamp) for _ in range(quantity)]
 
 
 class AcquisitionTask():
@@ -50,37 +38,39 @@ class AcquisitionTask():
         """
         self.device = device
 
-        if acquisition_mode == 'continuous':
-            DIGITAL_TASK = DigitalContinuousTask
-            ANALOG_TASK = AnalogContinuousTask
-        elif acquisition_mode == 'callback':
-            DIGITAL_TASK = DigitalCallbackTask
-            ANALOG_TASK = AnalogCallbackTask
-        elif acquisition_mode == 'simulated':
-            DIGITAL_TASK = DigitalSimulatedTask
-            ANALOG_TASK = AnalogSimulatedTask
-        else:
-            raise Exception('Invalid Acquisition Mode.')
-
-        self.digital_task = DIGITAL_TASK(
-            physical_channels=device['digital'],
-            rate=device['rate'],
-            samples_per_channel=samples_per_channel
-        )
-
-        self.analog_task = ANALOG_TASK(
-            physical_channels=device['analog'],
-            rate=device['rate'],
-            minv=device['minv'],
-            maxv=device['maxv'],
-            seconds_to_acquire=device['seconds_to_acquire'],
-            samples_per_channel=samples_per_channel
-        )
-
         if acquisition_mode == 'callback':
+            self.analog_task = CallbackTask(
+                physical_channels=device['analog'],
+                rate=device['rate'],
+                minv=device['minv'],
+                maxv=device['maxv'],
+                samples_per_channel=samples_per_channel
+            )
             self.analog_task.bind(callback)
-            self.digital_task.bind(callback)
+        else:
+            if acquisition_mode == 'continuous':
+                DIGITAL_TASK = DigitalContinuousTask
+                ANALOG_TASK = AnalogContinuousTask
+            elif acquisition_mode == 'simulated':
+                DIGITAL_TASK = DigitalSimulatedTask
+                ANALOG_TASK = AnalogSimulatedTask
+            else:
+                raise Exception('Invalid Acquisition Mode.')
 
+            self.digital_task = DIGITAL_TASK(
+                physical_channels=device['digital'],
+                rate=device['rate'],
+                samples_per_channel=samples_per_channel
+            )
+
+            self.analog_task = ANALOG_TASK(
+                physical_channels=device['analog'],
+                rate=device['rate'],
+                minv=device['minv'],
+                maxv=device['maxv'],
+                seconds_to_acquire=device['seconds_to_acquire'],
+                samples_per_channel=samples_per_channel
+            )
 
     def read(self):
         signals = self.read_analog()
@@ -116,7 +106,6 @@ class AcquisitionTask():
 
     def run(self):
         self.analog_task.run()
-        self.digital_task.run()
 
     def close(self):
         """
@@ -124,42 +113,78 @@ class AcquisitionTask():
         @return:
 
         """
-        self.analog_task.close()
-        self.digital_task.close()
+        try:
+            self.analog_task.close()
+            self.digital_task.close()
+        except:
+            pass
 
 
 if __name__ == '__main__':
-    import sys
     import platform
+    import sys
 
     # internal
     sys.path.append('../../')
+
     from arch.socket_arch.util import extract_devices
+    from acquisition import AcquisitionTask
 
     if platform.system() == 'Linux':
         sys.path.append('/var/www/mswim/')
     else:
         sys.path.append('c:/mswim/')
 
-    from mswim.settings import DEVICES
+    def test_callback():
+        from gui.plotter.async_chart import DaqMultiPlotter
+        from mswim.settings import DEVICES
 
-    def test1():
-        channels = extract_devices(DEVICES)['Dev5']
-        channels = channels['analog'] + channels['digital']
-        task = AcquisitionTask(extract_devices(DEVICES)['Dev5'], 'continuous')
+        chunk = 1000
+
+        groups_available = ['Dev5']
+
+        DaqMultiPlotter.configure(chunk, groups_available)
+
+        tasks = []
+
+        def callback1(interval, data):
+            DaqMultiPlotter.send_data({'Dev5': data})
+            DaqMultiPlotter.show()
+
+        def callback2(interval, data):
+            DaqMultiPlotter.send_data({'Dev4': data})
+            DaqMultiPlotter.show()
+        # device={}, acquisition_mode='',
+        # samples_per_channel=1, callback=()
+
+        for dev_name in groups_available:
+            tasks.append(AcquisitionTask(
+                device=extract_devices(DEVICES)[dev_name],
+                acquisition_mode='callback',
+                samples_per_channel=chunk,
+                callback=callback1
+            ))
+
+        DaqMultiPlotter.start()
+
+        for task in tasks:
+            task.run()
+
         while True:
-            data = task.read()
-            for channel in data:
-                print('%s: %s' % (channel, len(data[channel])))
+            try:
+                raw_input(
+                    'Acquiring samples continuously. ' +
+                    'Press CTRL + C to interrupt\n'
+                )
+            except KeyboardInterrupt:
+                break
 
-    def test2():
-        device = extract_devices(DEVICES)['Dev5']
-        digital_task = DigitalContinuousTask(
-            physical_channels=device['digital'],
-            rate=device['rate']
-        )
+        for task in tasks:
+            task.close()
 
-        while True:
-            print(digital_task.read())
+        DaqMultiPlotter.stop()
 
-    test1()
+    def test():
+        test_callback()
+
+    test()

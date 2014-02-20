@@ -2,7 +2,8 @@ from __future__ import division, print_function
 from datetime import timedelta
 from PyDAQmx import *
 from PyDAQmx.DAQmxCallBack import *
-from acquisition import calculate_time_sequence
+
+from utils import calculate_time_sequence
 from continuous import DigitalContinuousTask
 
 import numpy as np
