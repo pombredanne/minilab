@@ -40,8 +40,6 @@ class AcquisitionCallbackTask(Task):
     """
 
     """
-    data = None
-    a = None
 
     def __init__(
             self, physicalChannel=[], rate=1.0, minv=-5.0, maxv=5.0,

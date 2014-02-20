@@ -78,7 +78,6 @@ class AnalogContinuousTask():
 
         DAQmxStartTask(self.task)
 
-
     def read(self):
         """
         @return: data acquisitions, time of each acquisition

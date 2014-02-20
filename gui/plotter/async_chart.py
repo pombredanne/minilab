@@ -3,24 +3,26 @@ from collections import defaultdict
 from matplotlib import pyplot as plt
 from matplotlib.ticker import EngFormatter
 from random import random, randint
+from copy import deepcopy
 
 import time
 import numpy as np
+import traceback
 
-
-class DaqMultiPlotter():
+class DaqMultiPlotter(object):
     """
 
     """
     data_size = None
     time = None
     formatter = EngFormatter(unit='s', places=1)
+    data = {}
 
     # interval
     frame_limits = None
 
     @classmethod
-    def configure(cls, samples_per_channel):
+    def configure(cls, samples_per_channel, devices=[]):
         """
 
         """
@@ -30,6 +32,9 @@ class DaqMultiPlotter():
 
         # interval
         cls.frame_limits = [0, 1, -10, 10]
+
+        for dev in devices:
+            cls.data[dev] = {}
 
     @classmethod
     def start(cls):
@@ -41,25 +46,32 @@ class DaqMultiPlotter():
         """
 
         """
-        plt.clf()
+        for buffer_name, buffer_data in data.items():
+            cls.data[buffer_name] = buffer_data
 
-        num_charts = len(data)
+    @classmethod
+    def show(cls):
+        plt.clf()
+        num_charts = len(cls.data)
         i = 0
 
-        for buffer_name in data:
+        buffer_data = deepcopy(cls.data)
+
+        for buffer_name in buffer_data:
             i += 1
             chart_id = num_charts*100 + 10 + i
+
             ax = plt.subplot(chart_id)
             ax.xaxis.set_major_formatter(cls.formatter)
             ax.set_xlabel(buffer_name)
             ax.axis(cls.frame_limits)
             ax.set_autoscale_on(False)
             plt.grid()
-            for channel in data[buffer_name]:
-                ax.plot(cls.time, data[buffer_name][channel])
+            for ch, ch_data in buffer_data[buffer_name].items():
+                ax.plot(cls.time, ch_data)
 
         plt.draw()
-        plt.pause(0.0000001)
+        plt.pause(0.00000001)
 
     @classmethod
     def stop(cls):
@@ -80,7 +92,7 @@ if __name__ == '__main__':
 
         data = defaultdict(dict)
 
-        DaqMultiPlotter.configure(rows)
+        DaqMultiPlotter.configure(rows, ['ceramic', 'polymer'])
 
         DaqMultiPlotter.start()
 
@@ -93,8 +105,8 @@ if __name__ == '__main__':
                             np.random.random_sample((rows,)) + interval_a
                         )
                 DaqMultiPlotter.send_data(data)
-        except:
-            pass
+        except Exception as e:
+            print(traceback.format_exc())
 
         DaqMultiPlotter.stop()
 
