@@ -7,7 +7,8 @@ from simulated import DigitalSimulatedTask, AnalogSimulatedTask
 try:
     from simulated import DigitalSimulatedTask, AnalogSimulatedTask
     from continuous import DigitalContinuousTask, AnalogContinuousTask
-except:
+    from callback import DigitalCallbackTask, AnalogCallbackTask
+except Exception as e:
     from simulated import DigitalSimulatedTask as DigitalContinuousTask
     from simulated import AnalogSimulatedTask as AnalogContinuousTask
 
@@ -38,7 +39,10 @@ class AcquisitionTask():
 
     device = None
 
-    def __init__(self, device={}, acquisition_mode='', samples_per_channel=1):
+    def __init__(
+            self, device={}, acquisition_mode='',
+            samples_per_channel=1, callback=()
+    ):
         """
 
         @return:
@@ -49,7 +53,9 @@ class AcquisitionTask():
         if acquisition_mode == 'continuous':
             DIGITAL_TASK = DigitalContinuousTask
             ANALOG_TASK = AnalogContinuousTask
-
+        elif acquisition_mode == 'callback':
+            DIGITAL_TASK = DigitalCallbackTask
+            ANALOG_TASK = AnalogCallbackTask
         elif acquisition_mode == 'simulated':
             DIGITAL_TASK = DigitalSimulatedTask
             ANALOG_TASK = AnalogSimulatedTask
@@ -70,6 +76,11 @@ class AcquisitionTask():
             seconds_to_acquire=device['seconds_to_acquire'],
             samples_per_channel=samples_per_channel
         )
+
+        if acquisition_mode == 'callback':
+            self.analog_task.bind(callback)
+            self.digital_task.bind(callback)
+
 
     def read(self):
         signals = self.read_analog()
@@ -105,7 +116,7 @@ class AcquisitionTask():
 
     def run(self):
         self.analog_task.run()
-        self.analog_task.run()
+        self.digital_task.run()
 
     def close(self):
         """

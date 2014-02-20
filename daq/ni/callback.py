@@ -1,7 +1,9 @@
 from __future__ import division, print_function
+from datetime import timedelta
 from PyDAQmx import *
 from PyDAQmx.DAQmxCallBack import *
 from numpy import zeros
+from acquisition import calculate_time_sequence
 
 
 class AnalogCallbackTask(Task):
@@ -94,6 +96,9 @@ class AnalogCallbackTask(Task):
         )
         self.AutoRegisterDoneEvent(0)
 
+    def bind(self, callback):
+        self.external_callback = callback
+
     def EveryNCallback(self):
         read = int32()
         data = zeros(self.bufferSize)
@@ -116,14 +121,11 @@ class AnalogCallbackTask(Task):
             self.data, self.data.size, byref(read), None
         )
 
-        _timing = calc_time(
-            timedelta(seconds=1/self.samples_per_channel),
+        timing = calculate_time_sequence(
+            timedelta(seconds=1/self.rate),
             self.samples_per_channel)
 
-        # Create a ringbuffer or a temporary file to be used for other program
-        # self.a.extend([self.data.tolist(), _timing])
-
-        self.external_callback()
+        self.external_callback(timing, data)
 
         return 0  # The function should return an integer
 
@@ -141,7 +143,7 @@ class AnalogCallbackTask(Task):
         print('Acquisition stopped')
 
 
-class AnalogCallbackTask(Task):
+class DigitalCallbackTask(Task):
     """
 
     """
@@ -155,14 +157,10 @@ class AnalogCallbackTask(Task):
     number_of_channels = None
     buffer_size = None
     buffer_daq_size = None
-    external_callback = None
+    external_callback = ()
 
     def __init__(
-        self,
-        physical_channels=[],
-        rate=1000.,
-        samples_per_channel=1000,
-        external_callback=()
+        self, physical_channels=[], rate=1000., samples_per_channel=1000
     ):
         """
 
@@ -175,7 +173,6 @@ class AnalogCallbackTask(Task):
         self.number_of_channels = len(physical_channels)
         self.buffer_size = self.samples_per_channel * self.number_of_channels
         self.buffer_daq_size = self.buffer_size * self.rate/4  # w/ calibration
-        self.external_callback = external_callback
 
         self.CreateDIChan(trigger, "", DAQmx_Val_ChanForAllLines)
 
@@ -190,10 +187,14 @@ class AnalogCallbackTask(Task):
             DAQmxEveryNSamplesEventCallbackPtr callbackFunction,
             void *callbackData
         );'''
+
         self.AutoRegisterEveryNSamplesEvent(
             DAQmx_Val_Acquired_Into_Buffer, self.samples_per_channel, 0
         )
         self.AutoRegisterDoneEvent(0)
+
+    def bind(self, callback):
+        self.external_callback = callback
 
     def EveryNCallback(self):
         read = int32()
@@ -217,14 +218,12 @@ class AnalogCallbackTask(Task):
             self.data, self.data.size, byref(read), None
         )
 
-        _timing = calc_time(
-            timedelta(seconds=1/self.samples_per_channel),
-            self.samples_per_channel)
+        timing = calc_time(
+            timedelta(seconds=1/self.rate),
+            self.samples_per_channel
+        )
 
-        # Create a ringbuffer or a temporary file to be used for other program
-        # self.a.extend([self.data.tolist(), _timing])
-
-        self.external_callback()
+        self.external_callback(timing, data)
 
         return 0  # The function should return an integer
 

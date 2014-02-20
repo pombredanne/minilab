@@ -47,7 +47,8 @@ class AnalogContinuousTask():
         self.samples_per_channel = samples_per_channel
         self.number_of_channels = len(physical_channels)
         self.buffer_size = self.samples_per_channel * self.number_of_channels
-        self.buffer_daq_size = self.buffer_size * self.rate/4  # w/ calibration
+        # w/ calibration
+        self.buffer_daq_size = int(self.buffer_size * self.rate/4)
 
         self.minv = minv
         self.maxv = maxv

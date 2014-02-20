@@ -3,6 +3,7 @@ from matplotlib import pyplot as plt
 from matplotlib.ticker import EngFormatter
 
 import numpy as np
+import time
 
 
 def start():
@@ -35,13 +36,12 @@ def plotter(data_size=100, wait=0.00001):
         i = 0
         for name in data:
             i += 1
-            chart_id = chart_n*100 + 10 + i
+            ax = plt.subplot(chart_n*100 + 10 + i)
+            ax.grid()
+            ax.set_xlabel(name)
+            ax.xaxis.set_major_formatter(formatter)
+            ax.axis(frame_limits)
             for ch in data[name]:
-                ax = plt.subplot(chart_id)
-                ax.xaxis.set_major_formatter(formatter)
-                ax.axis(frame_limits)
-                ax.grid()
-                ax.set_xlabel(name)
                 ax.plot(time, data[name][ch])
 
         plt.draw()
@@ -50,7 +50,7 @@ def plotter(data_size=100, wait=0.00001):
 
 if __name__ == '__main__':
     def main():
-        data_size = 100
+        data_size = 1000
         mplt = plotter(data_size=data_size, wait=0.00001)
         mplt.next()
 
@@ -59,16 +59,34 @@ if __name__ == '__main__':
 
         while True:
             data = {
-                'Dev1': (b - a) * np.random.random_sample((data_size,)) + a,
-                'Dev2': (b - a) * np.random.random_sample((data_size,)) + a,
-                'Dev3': (b - a) * np.random.random_sample((data_size,)) + a
+                'Dev1': {
+                    'Dev1/ai1': (b - a) * np.random.random_sample((data_size,)) + a,
+                    'Dev1/ai2': (b - a) * np.random.random_sample((data_size,)) + a,
+                    'Dev1/ai3': (b - a) * np.random.random_sample((data_size,)) + a,
+                    'Dev1/ai4': (b - a) * np.random.random_sample((data_size,)) + a
+                },
+                'Dev2': {
+                    'Dev2/ai1': (b - a) * np.random.random_sample((data_size,)) + a,
+                    'Dev2/ai2': (b - a) * np.random.random_sample((data_size,)) + a,
+                    'Dev2/ai3': (b - a) * np.random.random_sample((data_size,)) + a,
+                    'Dev2/ai4': (b - a) * np.random.random_sample((data_size,)) + a
+                },
+                'Dev3': {
+                    'Dev3/ai1': (b - a) * np.random.random_sample((data_size,)) + a,
+                    'Dev3/ai2': (b - a) * np.random.random_sample((data_size,)) + a,
+                    'Dev3/ai3': (b - a) * np.random.random_sample((data_size,)) + a,
+                    'Dev3/ai4': (b - a) * np.random.random_sample((data_size,)) + a
+                }
             }
+            time_0 = time.time()
             mplt.send(data)
+            print('%f' % (time.time() - time_0))
 
         stop()
 
     try:
         main()
-    except:
+    except Exception as e:
         stop()
+        print(e.message)
         print('Exit.')
