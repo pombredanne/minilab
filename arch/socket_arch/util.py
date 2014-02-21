@@ -45,7 +45,7 @@ def extract_devices(sensors):
                 'seconds_to_acquire': 1.0
             }
 
-        _DEVICE[device_name]['digital'] += [trigger_name]
+        _DEVICE[device_name]['digital'] += list(trigger_name)
 
     return _DEVICE
 

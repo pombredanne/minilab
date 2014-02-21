@@ -41,6 +41,7 @@ class AcquisitionTask():
         if acquisition_mode == 'callback':
             self.analog_task = CallbackTask(
                 physical_channels=device['analog'],
+                digital_physical_channels=device['digital'],
                 rate=device['rate'],
                 minv=device['minv'],
                 maxv=device['maxv'],
@@ -127,7 +128,7 @@ if __name__ == '__main__':
     # internal
     sys.path.append('../../')
 
-    from arch.socket_arch.util import extract_devices
+    from arch.libs.util import extract_devices
     from acquisition import AcquisitionTask
 
     if platform.system() == 'Linux':
@@ -139,21 +140,33 @@ if __name__ == '__main__':
         from gui.plotter.async_chart import DaqMultiPlotter
         from mswim.settings import DEVICES
 
+        def callback1(dev_name):
+            def _cb(interval, data):
+                DaqMultiPlotter.send_data({dev_name: data})
+
+            return _cb
+
+        def callback2(dev_name):
+            def _cb(interval, data):
+                DaqMultiPlotter.send_data({dev_name: data})
+                DaqMultiPlotter.show()
+            return _cb
+
+
         chunk = 1000
 
-        groups_available = ['Dev5']
+        groups_available = ['Dev1', 'Dev2', 'Dev5', 'Dev4']
+        callback_list = {
+            'Dev1': callback1,
+            'Dev2': callback1,
+            'Dev5': callback1,
+            'Dev4': callback2
+        }
 
         DaqMultiPlotter.configure(chunk, groups_available)
 
         tasks = []
 
-        def callback1(interval, data):
-            DaqMultiPlotter.send_data({'Dev5': data})
-            DaqMultiPlotter.show()
-
-        def callback2(interval, data):
-            DaqMultiPlotter.send_data({'Dev4': data})
-            DaqMultiPlotter.show()
         # device={}, acquisition_mode='',
         # samples_per_channel=1, callback=()
 
@@ -162,7 +175,7 @@ if __name__ == '__main__':
                 device=extract_devices(DEVICES)[dev_name],
                 acquisition_mode='callback',
                 samples_per_channel=chunk,
-                callback=callback1
+                callback=callback_list[dev_name](dev_name)
             ))
 
         DaqMultiPlotter.start()

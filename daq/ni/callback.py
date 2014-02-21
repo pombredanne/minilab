@@ -49,7 +49,7 @@ class CallbackTask(Task):
         self.buffer_size = self.samples_per_channel * self.number_of_channels
 
         # w/ calibration
-        self.buffer_daq_size = int(self.buffer_size * self.rate/4)
+        self.buffer_daq_size = int(self.buffer_size * self.rate/10)
 
         self.external_callback = external_callback
 
