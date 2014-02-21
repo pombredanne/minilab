@@ -68,6 +68,8 @@ class DaqMultiPlotter(object):
             ax.set_autoscale_on(False)
             plt.grid()
             for ch, ch_data in buffer_data[buffer_name].items():
+                if len(cls.time) != len(ch_data):
+                    print(len(cls.time), len(ch_data), ch)
                 ax.plot(cls.time, ch_data)
 
         plt.draw()

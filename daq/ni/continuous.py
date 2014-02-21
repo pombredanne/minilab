@@ -108,7 +108,7 @@ class AnalogContinuousTask():
             None
         )
 
-        return data
+        return list(data)
 
     def close(self):
         print('')
@@ -201,7 +201,7 @@ class DigitalContinuousTask(object):
 
         DAQmxStopTask(self.task)
 
-        return data
+        return list(data)
 
     def close(self):
         """

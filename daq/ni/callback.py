@@ -101,7 +101,7 @@ class CallbackTask(Task):
             data, data.size, byref(read), None
         )
 
-        data = self.prepare_data(data)
+        data = self.prepare_data(list(data))
 
         timing = calculate_time_sequence(
             timedelta(seconds=1/self.rate),
