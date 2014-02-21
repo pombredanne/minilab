@@ -64,8 +64,8 @@ def save_acquisition_data(
                 t5cm = data[type_name][temperature_channels[5]]
                 t17cm = data[type_name][temperature_channels[17]]
 
-            t5cm = 0 if not t5cm else t5cm[0]
-            t17cm = 0 if not t17cm else t17cm[0]
+            t5cm = None if not t5cm else t5cm[0]
+            t17cm = None if not t17cm else t17cm[0]
 
             acquisition_data = {
                 'date_time': data[type_name]['time'][0],
@@ -113,7 +113,6 @@ def save_acquisition_data(
                     str(acq_time[i]) + '\'' + sql_values + ');'
                 ]
 
-            print('[II] Saving %s....' % type_name)
             cur.execute(''.join(sql), ())
             conn.commit()
             print('[II] %s saved!' % type_name)

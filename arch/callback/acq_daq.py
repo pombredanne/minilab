@@ -22,7 +22,7 @@ def main(settings, dsn):
     all_channels = extract_all_channels(settings.DEVICES)
     chunk = 1000
     samples_to_save = 15000
-    limit_per_channel = samples_to_save*50
+    limit_per_channel = samples_to_save*100
 
     def callback1(dev_name):
         def _cb(interval, data):
