@@ -7,7 +7,10 @@ def extract_devices(sensors):
     _DEVICE = defaultdict(dict)
 
     for sensors_group in sensors:
-        if not sensors[sensors_group]['acquisition_mode']:
+        if (
+            not sensors[sensors_group]['acquisition_mode'] and
+            not sensors_group == 'temperature'
+        ):
             continue
         # analog channels
         for item in sensors[sensors_group]['channels']:
@@ -54,9 +57,6 @@ def extract_analog_channels(sensors):
     _SENSORS_GROUPS = defaultdict(dict)
 
     for sensors_name in sensors:
-        if sensors_name == 'temperature':
-            continue
-
         if not sensors[sensors_name]['acquisition_mode']:
             continue
 
@@ -74,9 +74,6 @@ def extract_all_channels(sensors):
     _SENSORS_GROUPS = defaultdict(dict)
 
     for sensors_name in sensors:
-        if sensors_name == 'temperature':
-            continue
-
         if not sensors[sensors_name]['acquisition_mode']:
             continue
 

@@ -81,10 +81,6 @@ class SegmentStaticTask(object):
                 i + cls.chunk > data_size or
                 not daq_buffer.check_min_size(sensor_id, i, i+cls.chunk)
             ):
-                print(i + cls.chunk)
-                print(data_size)
-                print(daq_buffer.check_min_size(sensor_id, i, i+cls.chunk))
-                print()
                 continue
 
             result[sensor_id] = daq_buffer.extract(sensor_id, i, i+cls.chunk)
