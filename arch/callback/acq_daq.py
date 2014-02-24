@@ -20,7 +20,16 @@ from gui.plotter.async_chart import DaqMultiPlotter
 def main(settings, dsn):
     analog_channels = extract_analog_channels(settings.DEVICES)
     all_channels = extract_all_channels(settings.DEVICES)
-    chunk = 1000
+    devices = extract_devices(settings.DEVICES)
+
+    devices_available_name = ['Dev5', 'Dev4']
+    sensor_types_available = ['polymer', 'ceramic']
+
+    sensors_available = {
+        key: settings.DEVICES[key] for key in sensor_types_available
+    }
+
+    chunk = 2000
     samples_to_save = 15000
     limit_per_channel = samples_to_save*100
 
@@ -31,7 +40,7 @@ def main(settings, dsn):
         return _cb
 
     def callback2(dev_name):
-        pool = Pool(processes=6)
+        pool = Pool(processes=20)
 
         def _cb(interval, data):
             DaqStaticBuffer.append(data)
@@ -44,8 +53,9 @@ def main(settings, dsn):
                     pool.apply_async(
                         save_acquisition_data,
                         args=(
-                            {sensor_type: sensors_data}, analog_channels,
-                            settings.DEVICES, {}, dsn, 'mswim'
+                            {sensor_type: sensors_data},
+                            analog_channels,
+                            sensors_available, {}, dsn, 'mswim'
                         )
                     )
                 #DaqMultiPlotter.send_data(segmented_data)
@@ -53,10 +63,10 @@ def main(settings, dsn):
         return _cb
 
     DaqStaticBuffer.configure(all_channels, limit_per_channel)
-    SegmentStaticTask.configure(samples_to_save, settings.DEVICES)
 
-    groups_available = ['Dev1', 'Dev2', 'Dev5', 'Dev4']
-    sensor_types_available = ['polymer', 'ceramic', 'quartz']
+    SegmentStaticTask.configure(
+        samples_to_save, sensors_available
+    )
 
     callback_list = {
         'Dev1': callback1,
@@ -69,9 +79,9 @@ def main(settings, dsn):
 
     tasks = []
 
-    for dev_name in groups_available:
+    for dev_name in devices_available_name:
         tasks.append(AcquisitionTask(
-            device=extract_devices(settings.DEVICES)[dev_name],
+            device=devices[dev_name],
             acquisition_mode='callback',
             samples_per_channel=chunk,
             callback=callback_list[dev_name](dev_name)

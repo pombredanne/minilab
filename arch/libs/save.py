@@ -24,7 +24,6 @@ def save_acquisition_data(
 
     """
     try:
-        print('Save call listening.')
         type_acquisition = {
             'quartz': 1,
             'ceramic': 2,
@@ -38,7 +37,6 @@ def save_acquisition_data(
             cur.execute('SET search_path TO %s' % schema)
 
         for type_name in data.keys():
-            print('[II] Starting process save %s....' % type_name)
             # TODO: use variables configurations
             samples_per_channel = 15000
             acq_time = calculate_time_sequence(
