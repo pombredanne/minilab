@@ -9,7 +9,7 @@ import sys
 sys.path.append('../../')
 
 if platform.system() == 'Linux':
-    sys.path.append('/var/www/mswim/')
+    sys.path.insert(0, '/var/www/mswim/')
 else:
     sys.path.append('c:/mswim/')
 
