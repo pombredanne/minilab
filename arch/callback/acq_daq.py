@@ -6,6 +6,7 @@ Created on Tue Oct  8 17:04:42 2013
 """
 from __future__ import division, print_function
 from multiprocessing import Pool
+from datetime import datetime
 
 from daq.ni.acquisition import AcquisitionTask
 from arch.libs.buffer import DaqStaticBuffer
@@ -48,7 +49,7 @@ def main(settings, dsn):
             segmented_data = SegmentStaticTask.search(DaqStaticBuffer)
 
             if segmented_data:
-                print('segmented')
+                print('Segmented at %s' % (datetime.now()))
                 for sensor_type, sensors_data in segmented_data.items():
                     pool.apply_async(
                         save_acquisition_data,
@@ -95,8 +96,7 @@ def main(settings, dsn):
     while True:
         try:
             raw_input(
-                'Acquiring samples continuously. ' +
-                'Press CTRL + C to interrupt\n'
+                ('Acquiring samples continuously since %s. ' +
             )
         except KeyboardInterrupt:
             break

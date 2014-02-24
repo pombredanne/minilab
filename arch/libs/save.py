@@ -113,7 +113,7 @@ def save_acquisition_data(
 
             cur.execute(''.join(sql), ())
             conn.commit()
-            print('[II] %s saved!' % type_name)
+            print('[II] %s saved at %s!' % (type_name, datetime.now()))
 
         cur.close()
         conn.close()
