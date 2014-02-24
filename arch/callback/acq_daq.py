@@ -97,6 +97,7 @@ def main(settings, dsn):
         try:
             raw_input(
                 ('Acquiring samples continuously since %s. ' +
+                 'Press CTRL + C to interrupt\n') % datetime.now()
             )
         except KeyboardInterrupt:
             break
