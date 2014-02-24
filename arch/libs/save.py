@@ -1,4 +1,4 @@
-from labtrans.devices.daq.ni.acquisition import calculate_time_sequence
+from labtrans.devices.daq.ni.utils import calculate_time_sequence
 from collections import defaultdict
 from datetime import datetime, timedelta
 
