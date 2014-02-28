@@ -8,11 +8,12 @@ import sys
 # some useful parameters
 nsamples    = 5000 # about 1 sec
 samplerate  = 5000
-TERMINALEND = 'nrse' # consider 'rse' (referenced single-ended),'nrse' (non-referenced single ended)
-                     # 'diff', or 'pseudodiff' as other options, can look at panel for hints
+# consider 'rse' (referenced single-ended),'nrse' (non-referenced single ended)
+# 'diff', or 'pseudodiff' as other options, can look at panel for hints
+TERMINALEND = 'nrse'
 
 # connect analog input to this terminal, customize as you wish
-# analog_input = r'Dev5/ai0,Dev5/ai1,Dev5/ai2,Dev5/ai3,Dev5/ai4,Dev5/ai5,Dev5/ai6,Dev5/ai7,Dev5/ai8,Dev5/ai9,Dev5/ai10,Dev5/ai11,Dev5/ai12,Dev5/ai13,Dev5/ai14,Dev5/ai15' 
+
 analog_input_dev5 = r'Dev5/ai0'
 analog_input_dev4 = r'Dev4/ai0' 
 analog_input_dev2 = r'Dev3/ai0'
@@ -354,24 +355,19 @@ if __name__ == '__main__':
     dsamples_dev4 = mp.Queue()
     dsamples_dev5 = mp.Queue()
     
-    analog_dev1_proc = mp.Process(target=analog_dev1,args=(asamples_dev1,go))
+    analog_dev1_proc = mp.Process(target=analog_dev1, args=(asamples_dev1, go))
+    analog_dev2_proc = mp.Process(target=analog_dev2, args=(asamples_dev2, go))
+    analog_dev4_proc = mp.Process(target=analog_dev4, args=(asamples_dev4, go))
+    analog_dev5_proc = mp.Process(target=analog_dev5, args=(asamples_dev5, go))
+    digital_dev1_proc = mp.Process(
+        target=digital_dev1, args=(dsamples_dev1, go)
+    )
+
     analog_dev1_proc.daemon = True
-    
-    analog_dev2_proc = mp.Process(target=analog_dev2,args=(asamples_dev2,go))
     analog_dev2_proc.daemon = True
-
-    '''
-    analog_dev4_proc = mp.Process(target=analog_dev4,args=(asamples_dev4,go))
     analog_dev4_proc.daemon = True
-    
-    analog_dev5_proc = mp.Process(target=analog_dev5,args=(asamples_dev5,go))
     analog_dev5_proc.daemon = True
-    '''
-    
-    digital_dev1_proc = mp.Process(target=digital_dev1,args=(dsamples_dev1,go))
     digital_dev1_proc.daemon = True
-    
-
 
     print "Starting Processes"
     
@@ -395,8 +391,8 @@ if __name__ == '__main__':
     
     #time.sleep(3)
 
-    af = open('ana.txt','w')
-    df = open('dig.txt','w')
+    af = open('/tmp/ana.txt', 'w')
+    df = open('/tmp/dig.txt', 'w')
 
     print "\nWriting files..."
     sys.stdout.flush()
