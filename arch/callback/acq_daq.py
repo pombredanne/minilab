@@ -32,7 +32,7 @@ def main(settings, dsn):
 
     chunk = 2000
     samples_to_save = 15000
-    limit_per_channel = samples_to_save*100
+    limit_per_channel = samples_to_save*10
 
     def callback1(dev_name):
         def _cb(interval, data):
@@ -41,7 +41,7 @@ def main(settings, dsn):
         return _cb
 
     def callback2(dev_name):
-        pool = Pool(processes=20)
+        pool = Pool(processes=12)
 
         def _cb(interval, data):
             DaqStaticBuffer.append(data)
@@ -105,7 +105,7 @@ def main(settings, dsn):
     for task in tasks:
         task.close()
 
-    DaqMultiPlotter.stop()
+    #DaqMultiPlotter.stop()
 
 if __name__ == '__main__':
     import platform

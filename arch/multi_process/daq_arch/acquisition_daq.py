@@ -14,7 +14,7 @@ sys.path.insert(0, '/var/www/mswim/')
 sys.path.insert(1, os.getcwd())
 
 from buffer import DaqBuffer
-from acquisition.util.daq_util import extract_channels, extract_devices
+from acquisition.util.daq_util import extract_analog_channels, extract_devices
 
 from segmentation import SegmentedByTrigger
 from acquisition.weigh import Weigh
@@ -33,28 +33,28 @@ def memory_usage():
 
 
 def callback_process(group_name, data, sensors_groups):
-        # TODO: Re-factor it
-        group_channels = sensors_groups['channels']
+    # TODO: Re-factor it
+    group_channels = sensors_groups['channels']
 
-        temperature_channels = dict(
-            [(str(v), i) for i, v in
-             sensors_groups['temperature_channels'][0].items()
-            ]
-        )
+    temperature_channels = dict(
+        [(str(v), i) for i, v in
+         sensors_groups['temperature_channels'][0].items()
+        ]
+    )
 
-        # call the weigh method
-        t_0 = time.time()
-        #weight = Weigh.calculate({group_name: data})
-        print('ok')
-        t_1 = time.time()
-        print('Weigh Calc Time: %f' % (t_1 - t_0), end=' - ')
-        # call the save method
-        #save_acquisition_data(data, group_channels, temperature_channels)
-        t_2 = time.time()
-        print('Save Time: %f' % (t_2 - t_1))
-        # call chart method
-        # chart.send(data)
-        return
+    # call the weigh method
+    t_0 = time.time()
+    #weight = Weigh.calculate({group_name: data})
+    print('ok')
+    t_1 = time.time()
+    print('Weigh Calc Time: %f' % (t_1 - t_0), end=' - ')
+    # call the save method
+    #save_acquisition_data(data, group_channels, temperature_channels)
+    t_2 = time.time()
+    print('Save Time: %f' % (t_2 - t_1))
+    # call chart method
+    # chart.send(data)
+    return
 
 
 def run_server(server):
@@ -131,7 +131,7 @@ def startup(sensors_groups):
     samples_per_channel_read = 1000
 
     devices = extract_devices(sensors_groups)
-    channels = extract_channels(sensors_groups)
+    channels = extract_analog_channels(sensors_groups)
 
     bf = DaqBuffer(channels, samples_per_channel*10)
 

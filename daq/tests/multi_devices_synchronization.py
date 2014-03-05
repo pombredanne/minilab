@@ -5,22 +5,27 @@ from PyDAQmx import *
 import multiprocessing as mp
 import sys
 
+# internal libs
+from arch.libs.buffer import DaqBuffer
+
 # some useful parameters
-nsamples    = 5000 # about 1 sec
-samplerate  = 5000
+nsamples = 5000  # about 1 sec
+samplerate = 5000
 # consider 'rse' (referenced single-ended),'nrse' (non-referenced single ended)
 # 'diff', or 'pseudodiff' as other options, can look at panel for hints
 TERMINALEND = 'nrse'
 
 # connect analog input to this terminal, customize as you wish
+nchannels = 16
+analog_input_dev5 = r','.join(['Dev5/ai%s' % s for s in range(nchannels)])
+analog_input_dev4 = r','.join(['Dev4/ai%s' % s for s in range(nchannels)])
+analog_input_dev2 = r','.join(['Dev2/ai%s' % s for s in range(nchannels)])
+analog_input_dev1 = r','.join(['Dev1/ai%s' % s for s in range(nchannels)])
+temperature_input = r'Dev4/ai30,Dev4/ai31'
 
-analog_input_dev5 = r'Dev5/ai0'
-analog_input_dev4 = r'Dev4/ai0' 
-analog_input_dev2 = r'Dev3/ai0'
-analog_input_dev1 = r'Dev1/ai0'
-nchannels = 1
+analog_input_dev4 += ',' + temperature_input
 
-ndigital = 1 # number of digital channels
+ndigital = 1  # number of digital channels
 digital_input_dev5 = r'Dev5/port0/line0'
 digital_input_dev4 = r'Dev4/port0/line0'
 digital_input_dev1 = r'Dev1/port0/line0'
@@ -52,11 +57,11 @@ def analog_dev1(asamples_dev1,go):
         units=DAQmx_Val_Volts, customScaleName=None
     )
     aitask.CfgSampClkTiming(
-        'OnboardClock',
+        '',
         samplerate,
         DAQmx_Val_Rising,
         DAQmx_Val_ContSamps,
-        nsamples*10
+        nsamples*nchannels*10
     )
     #print "\naitask info:", aitask.get_info_str()
     sys.stdout.flush()
@@ -73,18 +78,19 @@ def analog_dev1(asamples_dev1,go):
             DAQmx_Val_GroupByChannel,
             adata,
             nsamples*nchannels,
-            byref(total_samps),        
+            byref(total_samps),
             None
         )
         asamples_dev1.put(adata)
         #prof_a.write('%f\n' % (time.time()-t))
         print "Read %s ANALOG  samples ... queue size = %s, %f" % (
-            nsamples,asamples_dev1.qsize(), time.time()-t
+            total_samps.value, asamples_dev1.qsize(), time.time()-t
         )
         sys.stdout.flush()
     aitask.stop()
     del aitask
     asamples_dev1.task_done()
+
 
 def analog_dev2(asamples_dev2,go):
     # Analog dev 4
@@ -92,7 +98,7 @@ def analog_dev2(asamples_dev2,go):
     # name='AIN'
     aitask = Task()
     aitask.CreateAIVoltageChan(
-        analog_input_dev2, 'A2',
+        analog_input_dev2, '',
         minVal=-10.0,maxVal=10.0, terminalConfig=DAQmx_Val_NRSE, 
         units=DAQmx_Val_Volts, customScaleName=None
     )
@@ -101,7 +107,7 @@ def analog_dev2(asamples_dev2,go):
         samplerate,
         DAQmx_Val_Rising,
         DAQmx_Val_ContSamps,
-        nsamples*10
+        nsamples*nchannels*10
     )
     #print "\naitask info:", aitask.get_info_str()
     sys.stdout.flush()
@@ -118,19 +124,20 @@ def analog_dev2(asamples_dev2,go):
             DAQmx_Val_GroupByChannel,
             adata,
             nsamples*nchannels,
-            byref(total_samps),        
+            byref(total_samps),
             None
         )
         asamples_dev2.put(adata)
         #prof_a.write('%f\n' % (time.time()-t))
         print "Read %s ANALOG  samples ... queue size = %s, %f" % (
-            nsamples,asamples_dev2.qsize(), time.time()-t
+            nsamples, asamples_dev2.qsize(), time.time()-t
         )
         sys.stdout.flush()
     aitask.stop()
     del aitask
     asamples_dev2.task_done()
-    
+
+
 def analog_dev4(asamples_dev4,go):
     # Analog dev 4
     print "\nCreating analog task."
@@ -142,11 +149,11 @@ def analog_dev4(asamples_dev4,go):
         units=DAQmx_Val_Volts, customScaleName=None
     )
     aitask.CfgSampClkTiming(
-        r'/Dev1/ai/SampleClock',
+        r'',
         samplerate,
         DAQmx_Val_Rising,
         DAQmx_Val_ContSamps,
-        nsamples*10
+        nsamples*(nchannels+2)*10
     )
     #print "\naitask info:", aitask.get_info_str()
     sys.stdout.flush()
@@ -155,14 +162,14 @@ def analog_dev4(asamples_dev4,go):
     while run:
         t = time.time()
         total_samps = int32()
-        adata = np.zeros((nsamples*nchannels,), dtype=np.float64)
+        adata = np.zeros((nsamples*(nchannels+2),), dtype=np.float64)
         
         aitask.ReadAnalogF64(
             nsamples, 
             10.0,
             DAQmx_Val_GroupByChannel,
             adata,
-            nsamples*nchannels,
+            nsamples*(nchannels+2),
             byref(total_samps),        
             None
         )
@@ -175,7 +182,8 @@ def analog_dev4(asamples_dev4,go):
     aitask.stop()
     del aitask
     asamples_dev4.task_done()
-    
+
+
 def analog_dev5(asamples_dev5,go):
     # Analog
     print "\nCreating analog task."
@@ -183,7 +191,7 @@ def analog_dev5(asamples_dev5,go):
     aitask = Task()
     aitask.CreateAIVoltageChan(
         analog_input_dev5, '',
-        minVal=-10.0,maxVal=10.0, terminalConfig=DAQmx_Val_NRSE, 
+        minVal=-10.0, maxVal=10.0, terminalConfig=DAQmx_Val_NRSE,
         units=DAQmx_Val_Volts, customScaleName=None
     )
     
@@ -192,7 +200,7 @@ def analog_dev5(asamples_dev5,go):
         samplerate,
         DAQmx_Val_Rising,
         DAQmx_Val_ContSamps,
-        nsamples*10
+        nsamples*nchannels*10
     )
     #print "\naitask info:", aitask.get_info_str()
     sys.stdout.flush()
@@ -232,7 +240,7 @@ def digital_dev1(dsamples_dev1,go):
     ditask.CreateDIChan(digital_input_dev1, '', DAQmx_Val_ChanPerLine)
     ditask.CfgSampClkTiming(
         r'/Dev1/ai/SampleClock', samplerate,
-        DAQmx_Val_Rising, DAQmx_Val_ContSamps, nsamples*10*ndigital
+        DAQmx_Val_Rising, DAQmx_Val_ContSamps, nsamples*ndigital*10
     )
     #print "digital task info:", ditask.get_info_str()
     sys.stdout.flush()
@@ -247,7 +255,7 @@ def digital_dev1(dsamples_dev1,go):
         
         ditask.ReadDigitalLines(
             nsamples,
-            2.0,
+            10.0,
             DAQmx_Val_GroupByChannel,
             ddata,
             nsamples,
@@ -264,15 +272,16 @@ def digital_dev1(dsamples_dev1,go):
     ditask.stop()
     del ditask
     dsamples_dev1.task_done()
-    
-def digital_dev4(dsamples_dev4,go):
+
+
+def digital_dev4(dsamples_dev4, go):
     # Digital
     print "\nCreating digital task."
     ditask = Task()
-    ditask.CreateDIChan(digital_input_dev4, 'line0', DAQmx_Val_ChanPerLine)
+    ditask.CreateDIChan(digital_input_dev4, '', DAQmx_Val_ChanPerLine)
     ditask.CfgSampClkTiming(
-        r'/Dev1/ai/SampleClock', samplerate,
-        DAQmx_Val_Rising, DAQmx_Val_ContSamps, nsamples*10*ndigital
+        r'/Dev4/ai/SampleClock', samplerate,
+        DAQmx_Val_Rising, DAQmx_Val_ContSamps, nsamples*ndigital*10
     )
     #print "digital task info:", ditask.get_info_str()
     sys.stdout.flush()
@@ -287,7 +296,7 @@ def digital_dev4(dsamples_dev4,go):
         
         ditask.ReadDigitalLines(
             nsamples,
-            2.0,
+            10.0,
             DAQmx_Val_GroupByChannel,
             ddata,
             nsamples,
@@ -305,14 +314,15 @@ def digital_dev4(dsamples_dev4,go):
     del ditask
     dsamples_dev4.task_done()
 
-def digital_dev5(dsamples_dev5,go):
+
+def digital_dev5(dsamples_dev5, go):
     # Digital
     print "\nCreating digital task."
     ditask = Task()
-    ditask.CreateDIChan(digital_input_dev5, 'line0', DAQmx_Val_ChanPerLine)
+    ditask.CreateDIChan(digital_input_dev5, '', DAQmx_Val_ChanPerLine)
     ditask.CfgSampClkTiming(
-        r'/Dev1/ai/SampleClock', samplerate,
-        DAQmx_Val_Rising, DAQmx_Val_ContSamps, nsamples*10*ndigital
+        r'/Dev5/ai/SampleClock', samplerate,
+        DAQmx_Val_Rising, DAQmx_Val_ContSamps, nsamples*ndigital*10
     )
     #print "digital task info:", ditask.get_info_str()
     sys.stdout.flush()
@@ -327,7 +337,7 @@ def digital_dev5(dsamples_dev5,go):
         
         ditask.ReadDigitalLines(
             nsamples,
-            2.0,
+            10.0,
             DAQmx_Val_GroupByChannel,
             ddata,
             nsamples,
@@ -345,50 +355,84 @@ def digital_dev5(dsamples_dev5,go):
     del ditask
     dsamples_dev5.task_done()
 
+
+def ring_buffer(bf_queue):
+    channels_settings = {
+        {'quartz': analog_input_dev1.split(',')+analog_input_dev2.split(',')},
+        {'ceramic': analog_input_dev5.split(',')+temperature_input.split(',')},
+        {'polymer': analog_input_dev4.split(',')}
+    }
+
+    bf = DaqBuffer(channels_settings, nsamples*100)
+
+    while True:
+        device, data = bf_queue.get()
+
+    bf_queue.task_done()
+
 if __name__ == '__main__':
     go = mp.Event()
+
+    bf_queue = mp.Queue()
+
     asamples_dev4 = mp.Queue()
     asamples_dev5 = mp.Queue()
     asamples_dev2 = mp.Queue()
     asamples_dev1 = mp.Queue()
+
     dsamples_dev1 = mp.Queue()
     dsamples_dev4 = mp.Queue()
     dsamples_dev5 = mp.Queue()
+
+    bf_proc = mp.Process(target=ring_buffer, args=(bf_queue,))
     
     analog_dev1_proc = mp.Process(target=analog_dev1, args=(asamples_dev1, go))
     analog_dev2_proc = mp.Process(target=analog_dev2, args=(asamples_dev2, go))
     analog_dev4_proc = mp.Process(target=analog_dev4, args=(asamples_dev4, go))
     analog_dev5_proc = mp.Process(target=analog_dev5, args=(asamples_dev5, go))
+
     digital_dev1_proc = mp.Process(
         target=digital_dev1, args=(dsamples_dev1, go)
+    )
+    digital_dev4_proc = mp.Process(
+        target=digital_dev4, args=(dsamples_dev4, go)
+    )
+    digital_dev5_proc = mp.Process(
+        target=digital_dev5, args=(dsamples_dev5, go)
     )
 
     analog_dev1_proc.daemon = True
     analog_dev2_proc.daemon = True
     analog_dev4_proc.daemon = True
     analog_dev5_proc.daemon = True
+
     digital_dev1_proc.daemon = True
+    digital_dev4_proc.daemon = True
+    digital_dev5_proc.daemon = True
 
     print "Starting Processes"
+
+    digital_dev1_proc.start()
+    print "Digital Dev1 process PID = %s" % digital_dev1_proc.pid
+
+    digital_dev4_proc.start()
+    print "Digital Dev4 process PID = %s" % digital_dev4_proc.pid
+
+    digital_dev5_proc.start()
+    print "Digital Dev5 process PID = %s" % digital_dev5_proc.pid
+
+    analog_dev1_proc.start()
+    print "Analog Dev1 process PID  = %s" % analog_dev1_proc.pid
     
     analog_dev2_proc.start()
     print "Analog Dev2 process PID  = %s" % analog_dev2_proc.pid
-    
-    digital_dev1_proc.start()
-    print "Digital Dev1 process PID = %s" % digital_dev1_proc.pid
-    
-    '''
     
     analog_dev4_proc.start()
     print "Analog Dev4 process PID  = %s" % analog_dev4_proc.pid
     
     analog_dev5_proc.start()
     print "Analog Dev5 process PID  = %s" % analog_dev5_proc.pid
-    '''
-    
-    analog_dev1_proc.start()
-    print "Analog Dev1 process PID  = %s" % analog_dev1_proc.pid
-    
+
     #time.sleep(3)
 
     af = open('/tmp/ana.txt', 'w')
@@ -405,37 +449,47 @@ if __name__ == '__main__':
         t = time.time()
         
         asamp = asamples_dev1.get()
-        #asamp += asamples_dev1.get()
+        asamp += asamples_dev1.get()
         #asamp += asamples_dev1.get()
         for a_s in asamp:
             af.write('%s\n' % a_s)
-        
+
         asamp = asamples_dev2.get()
-        #asamp += asamples_dev2.get()
+        asamp += asamples_dev2.get()
         #asamp += asamples_dev2.get()
         for a_s in asamp:
             af.write('%s\n' % a_s)
-        '''
+
         asamp = asamples_dev4.get()
         asamp += asamples_dev4.get()
-        asamp += asamples_dev4.get()
+        #asamp += asamples_dev4.get()
         for a_s in asamp:
             af.write('%s\n' % a_s)
             
         asamp = asamples_dev5.get()
         asamp += asamples_dev5.get()
-        asamp += asamples_dev5.get()
+        #asamp += asamples_dev5.get()
         for a_s in asamp:
             af.write('%s\n' % a_s)
-        '''
-        '''
+
         dsamp = dsamples_dev1.get()
-        #dsamp += dsamples_dev1.get()
+        dsamp += dsamples_dev1.get()
         #dsamp += dsamples_dev1.get()
         for d_s in dsamp:
             df.write('%s\n' % d_s)
-        '''
-            
+
+        dsamp = dsamples_dev4.get()
+        dsamp += dsamples_dev4.get()
+        #dsamp += dsamples_dev4.get()
+        for d_s in dsamp:
+            df.write('%s\n' % d_s)
+
+        dsamp = dsamples_dev5.get()
+        dsamp += dsamples_dev5.get()
+        #dsamp += dsamples_dev5.get()
+        for d_s in dsamp:
+            df.write('%s\n' % d_s)
+
         print(">>>> Read in %f secs." % (time.time()-t))
     af.close()
     df.close()

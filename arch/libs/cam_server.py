@@ -15,7 +15,7 @@ else:
     sys.path.append('c:/mswim/')
 
 
-HOST = ''                 # Symbolic name meaning all available interfaces
+HOST = 'localhost'                 # Symbolic name meaning all available interfaces
 PORT = 65080              # Arbitrary non-privileged port
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -88,8 +88,7 @@ while True:
         )
     elif cmd == 'getimage':
         f = open(
-            '../../ocr/licenseplates/docs/' +
-            '00991_000000.jpg', 'rb'
+            '/tmp/vehicle_image.jpg', 'rb'
         )
         result = f.read()
         f.close()
@@ -101,7 +100,7 @@ while True:
             '<frametime>2013.06.18 15:38:49.146</frametime>      ' +
             '<frametimems>1371569929146</frametimems>      ' +
             '<frameindex>1398</frameindex>   </capture>   <anpr>      ' +
-            '<text>&#x6E;&#x2E;&#x61;&#x2E;&#x20;&#x28;&#x35;&#x29;' +
+            '<text>&#x35;&#x35;&#x35;&#x35;&#x35;&#x35;&#x35;' +
             '</text><type>-1</type>      ' +
             '<frame>0,0,0,0,0,0,0,0</frame><bgcolor>0</bgcolor>    ' +
             '  <color>0</color><confidence>0</confidence>' +

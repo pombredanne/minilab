@@ -4,6 +4,7 @@
 """
 from __future__ import print_function
 from collections import defaultdict
+from datetime import datetime
 
 
 class DaqBuffer(object):
@@ -68,6 +69,7 @@ class DaqBuffer(object):
         @type new_data: dict
 
         """
+        overwritten = False
         for channel_name in new_data:
             data_size = len(new_data[channel_name])
 
@@ -75,13 +77,15 @@ class DaqBuffer(object):
                 buffer_size = len(self.data[channel_name][group_name])
 
                 if buffer_size + data_size >= self.limit_per_channel:
-                    i = self.limit_per_channel - buffer_size - data_size
+                    i = buffer_size + data_size - self.limit_per_channel
                     self.data[channel_name][group_name][:] = (
                         self.data[channel_name][group_name][i:]
                     )
-                    print('Data overwritten.')
+                    overwritten = True
 
                 self.data[channel_name][group_name] += new_data[channel_name]
+        if overwritten:
+            print('Data overwritten at %s.' % datetime.now())
 
     def extract(self, group_name, start=None, end=None):
         """
@@ -196,6 +200,7 @@ class DaqStaticBuffer(object):
         @type new_data: list
 
         """
+        overwritten = False
         for channel_name in new_data:
             data_size = len(new_data[channel_name])
 
@@ -207,9 +212,12 @@ class DaqStaticBuffer(object):
                     cls.data[channel_name][group_name][:] = (
                         cls.data[channel_name][group_name][i:]
                     )
-                    print('Data overwritten.')
+                    overwritten = True
 
                 cls.data[channel_name][group_name] += new_data[channel_name]
+
+        if overwritten:
+            print('Data overwritten at %s.' % datetime.now())
 
     @classmethod
     def extract(cls, group_name, start=None, end=None):
