@@ -1,7 +1,8 @@
 # need to start the dio task first!
+from PyDAQmx import *
 import time
 import numpy as np
-from PyDAQmx import *
+import platform
 import multiprocessing as mp
 import sys
 
@@ -10,7 +11,10 @@ from arch.libs.buffer import DaqBuffer
 from arch.libs.segmentation import SegmentTask
 from arch.libs.save import Acquisition
 
+from labtrans.devices.cam.ocr.arh import FXCamd102
+
 # some useful parameters
+CAM_HOST = 'localhost:65080'
 samples_to_save = 15000
 nsamples = 5000  # about 1 sec
 samplerate = 5000.
@@ -397,7 +401,12 @@ def ring_buffer(bf_queue, save_queue):
     bf_queue.task_done()
 
 
-def save_data(save_queue):
+def save_data(
+    save_queue,
+    cam_quartz_queue,
+    cam_ceramic_queue,
+    cam_polymer_queue
+):
     """
 
     """
@@ -419,6 +428,12 @@ def save_data(save_queue):
         'polymer': analog_input_dev4.split(',')
     }
 
+    _CAM = {
+        'quartz': cam_quartz_queue,
+        'ceramic': cam_ceramic_queue,
+        'polymer': cam_polymer_queue
+    }
+
     acq = Acquisition(
         dsn, 'mswim', samples_to_save, samplerate, 1,
         sensors_settings, channels
@@ -427,15 +442,47 @@ def save_data(save_queue):
     # LOOP PROCESS
     while True:
         data = save_queue.get()
-        acq.save(data)
+        vehicle_image = {k: _CAM[k].get() for k in data.keys()}
+        acq.save(data, vehicle_image)
         print('<<< Saved Data from %s' % str(data.keys()))
 
 
-if __name__ == '__main__':
-    go = mp.Event()
+def cam_trigger(
+    cam_event, cam_quartz_queue,
+    cam_ceramic_queue, cam_polymer_queue
+):
+    """
 
+    """
+    cam = FXCamd102(CAM_HOST)
+    while True:
+        t = time.time()
+        cam_event.wait()
+
+        image_id = cam.send_trigger(wait=True)
+        im = cam.image(image_id)
+
+        cam_quartz_queue.put(im)
+        cam_ceramic_queue.put(im)
+        cam_polymer_queue.put(im)
+        cam_event.clear()
+        print(
+            'CAM size %s : - Exec time: %f secs' %
+            (cam_quartz_queue.qsize(), time.time() - t)
+        )
+
+if __name__ == '__main__':
+    # EVENTS
+    go = mp.Event()
+    cam_event = mp.Event()
+
+    # QUEUES
     bf_queue = mp.Queue()
     save_queue = mp.Queue()
+
+    cam_quartz_queue = mp.Queue()
+    cam_ceramic_queue = mp.Queue()
+    cam_polymer_queue = mp.Queue()
 
     asamples_dev4 = mp.Queue()
     asamples_dev5 = mp.Queue()
@@ -446,9 +493,22 @@ if __name__ == '__main__':
     dsamples_dev4 = mp.Queue()
     dsamples_dev5 = mp.Queue()
 
+    # PROCESSES
     bf_proc = mp.Process(target=ring_buffer, args=(bf_queue, save_queue))
-    save_proc = mp.Process(target=save_data, args=(save_queue,))
-    
+    save_proc = mp.Process(
+        target=save_data,
+        args=(
+            save_queue, cam_quartz_queue, cam_ceramic_queue, cam_polymer_queue
+        )
+    )
+    cam_proc = mp.Process(
+        target=cam_trigger,
+        args=(
+            cam_event, cam_quartz_queue,
+            cam_ceramic_queue, cam_polymer_queue
+        )
+    )
+
     analog_dev1_proc = mp.Process(target=analog_dev1, args=(asamples_dev1, go))
     analog_dev2_proc = mp.Process(target=analog_dev2, args=(asamples_dev2, go))
     analog_dev4_proc = mp.Process(target=analog_dev4, args=(asamples_dev4, go))
@@ -466,6 +526,7 @@ if __name__ == '__main__':
 
     bf_proc.daemon = True
     save_proc.daemon = True
+    cam_proc.daemon = True
 
     analog_dev1_proc.daemon = True
     analog_dev2_proc.daemon = True
@@ -502,6 +563,7 @@ if __name__ == '__main__':
     # buffer process start
     bf_proc.start()
     save_proc.start()
+    cam_proc.start()
 
     print "\nWriting files..."
     sys.stdout.flush()
@@ -512,10 +574,14 @@ if __name__ == '__main__':
 
     while run:
         t = time.time()
-        
+
+        dev1_digital_values = dsamples_dev1.get()
+        if not cam_event.is_set() and dev1_digital_values.any():
+            cam_event.set()
+
         bf_queue.put(
             ('Dev1',
-             np.concatenate((asamples_dev1.get(), dsamples_dev1.get())))
+             np.concatenate((asamples_dev1.get(), dev1_digital_values)))
         )
         bf_queue.put(('Dev2', asamples_dev2.get()))
         bf_queue.put(

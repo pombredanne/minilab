@@ -36,13 +36,17 @@ class Acquisition(object):
         self.sensors_settings = sensors_settings
         self.channels = channels
 
-    def save(self, data={}, weight_data={}):
+    def save(self, data={}, vehicle_image={}, weight_data={}):
         """
         Save acquisition data from dictionary
 
         @param data: sensors data in the follow format:
-                     {'group_sensor': {'Dev#/ch#': [#.#, .... #.#]}}
+            {'group_sensor': {'Dev#/ch#': [#.#, .... #.#]}}
         @type data: dict
+        @param vehicle_image: dictionary image vehicle indexed by sensor type
+        @type vehicle_image: dict
+        @param weight_data: processed data with weight, speed, axles, etc.
+        @type weight_data: dict
         @return: True if success or False if fail
         @rtype: bool
 
@@ -85,6 +89,11 @@ class Acquisition(object):
                     'sensor_type': self.type_acquisition[type_name],
                     'acquisition_type': self.save_mode
                 }
+
+                if type_name in vehicle_image:
+                    acquisition_data['vehicle_image'] = (
+                        psycopg2.Binary(vehicle_image[type_name])
+                    )
 
                 num_channels = len(chans)
 
