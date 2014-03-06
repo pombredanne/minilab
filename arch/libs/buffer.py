@@ -83,7 +83,9 @@ class DaqBuffer(object):
                     )
                     overwritten = True
 
-                self.data[channel_name][group_name] += new_data[channel_name]
+                self.data[channel_name][group_name] += (
+                    new_data[channel_name].tolist()
+                )
         if overwritten:
             print('Data overwritten at %s.' % datetime.now())
 
