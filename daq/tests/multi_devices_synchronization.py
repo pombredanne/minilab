@@ -1,17 +1,37 @@
 # need to start the dio task first!
+from __future__ import print_function, absolute_import
 from PyDAQmx import *
 import time
 import numpy as np
 import platform
 import multiprocessing as mp
 import sys
+import os
 
 # internal libs
+_dirname = os.path.dirname
+parent_dir = _dirname(_dirname(_dirname(os.path.abspath(__file__))))
+os.sys.path.insert(1, parent_dir)
+os.sys.path.insert(1, 'c:/mswim/')
+
+mod = __import__('arch')
+sys.modules['arch'] = mod
+__package__ = 'arch'
+
 from arch.libs.buffer import DaqBuffer
 from arch.libs.segmentation import SegmentTask
-from arch.libs.save import Acquisition
+from arch.libs.save import Acquisition, save_acquisition_data
 
 from labtrans.devices.cam.ocr.arh import FXCamd102
+
+__PRINT = print
+DEBUG = False
+
+def new_print(*args, **kargs):
+    if DEBUG:
+        __PRINT(*args, **kargs)
+
+print = new_print
 
 # some useful parameters
 CAM_HOST = 'localhost:65080'
@@ -60,6 +80,8 @@ digital_input_dev5 = r'Dev5/port0/line0'
 digital_input_dev4 = r'Dev4/port0/line0'
 digital_input_dev1 = r'Dev1/port0/line0'
 
+cam_input_trigger = r'Dev2/port0/line0'
+
 DEV = {}
 DEV['Dev1'] = analog_input_dev1.split(',') + digital_input_dev1.split(',')
 DEV['Dev2'] = analog_input_dev2.split(',')
@@ -90,7 +112,7 @@ prof_d = open('c:/tmp/prof_d', 'a')
 
 def analog_dev1(asamples_dev1, go):
     # Analog dev 1
-    print "\nCreating analog task."
+    print("\nCreating analog task.")
     # name='AIN'
     aitask = Task()
     aitask.CreateAIVoltageChan(analog_input_dev1, **DEFAULT_PARAM_CREATE_AI)
@@ -116,9 +138,9 @@ def analog_dev1(asamples_dev1, go):
         )
         asamples_dev1.put(adata)
         #prof_a.write('%f\n' % (time.time()-t))
-        print "Read %s ANALOG  samples ... queue size = %s, %f" % (
+        print("Read %s ANALOG  samples ... queue size = %s, %f" % (
             total_samps.value, asamples_dev1.qsize(), time.time()-t
-        )
+        ))
         sys.stdout.flush()
     aitask.stop()
     del aitask
@@ -127,7 +149,7 @@ def analog_dev1(asamples_dev1, go):
 
 def analog_dev2(asamples_dev2,go):
     # Analog dev 4
-    print "\nCreating analog task."
+    print("\nCreating analog task.")
     # name='AIN'
     aitask = Task()
     aitask.CreateAIVoltageChan(analog_input_dev2, **DEFAULT_PARAM_CREATE_AI)
@@ -153,9 +175,9 @@ def analog_dev2(asamples_dev2,go):
         )
         asamples_dev2.put(adata)
         #prof_a.write('%f\n' % (time.time()-t))
-        print "Read %s ANALOG  samples ... queue size = %s, %f" % (
+        print("Read %s ANALOG  samples ... queue size = %s, %f" % (
             nsamples, asamples_dev2.qsize(), time.time()-t
-        )
+        ))
         sys.stdout.flush()
     aitask.stop()
     del aitask
@@ -164,7 +186,7 @@ def analog_dev2(asamples_dev2,go):
 
 def analog_dev4(asamples_dev4,go):
     # Analog dev 4
-    print "\nCreating analog task."
+    print("\nCreating analog task.")
     # name='AIN'
     aitask = Task()
     aitask.CreateAIVoltageChan(
@@ -197,9 +219,9 @@ def analog_dev4(asamples_dev4,go):
         )
         asamples_dev4.put(adata)
         #prof_a.write('%f\n' % (time.time()-t))
-        print "Read %s ANALOG  samples ... queue size = %s, %f" % (
+        print("Read %s ANALOG  samples ... queue size = %s, %f" % (
             nsamples,asamples_dev4.qsize(), time.time()-t
-        )
+        ))
         sys.stdout.flush()
     aitask.stop()
     del aitask
@@ -208,7 +230,7 @@ def analog_dev4(asamples_dev4,go):
 
 def analog_dev5(asamples_dev5,go):
     # Analog
-    print "\nCreating analog task."
+    print("\nCreating analog task.")
     # name='AIN'
     aitask = Task()
     aitask.CreateAIVoltageChan(analog_input_dev5, **DEFAULT_PARAM_CREATE_AI)
@@ -235,9 +257,9 @@ def analog_dev5(asamples_dev5,go):
         
         asamples_dev5.put(adata)
         #prof_a.write('%f\n' % (time.time()-t))
-        print "Read %s ANALOG  samples ... queue size = %s, %f" % (
+        print("Read %s ANALOG  samples ... queue size = %s, %f" % (
             nsamples,asamples_dev5.qsize(), time.time()-t
-        )
+        ))
         sys.stdout.flush()
     aitask.stop()
     del aitask
@@ -246,7 +268,7 @@ def analog_dev5(asamples_dev5,go):
 
 def digital_dev1(dsamples_dev1,go):
     # Digital
-    print "\nCreating digital task."
+    print("\nCreating digital task.")
     ditask = Task()
     ditask.CreateDIChan(digital_input_dev1, '', DAQmx_Val_ChanPerLine)
     ditask.CfgSampClkTiming(
@@ -275,9 +297,9 @@ def digital_dev1(dsamples_dev1,go):
         )
         dsamples_dev1.put(ddata)
         #prof_d.write('%f\n' % (time.time()-t))
-        print "Read %s DIGITAL samples ... queue size = %s, %f" % (
+        print("Read %s DIGITAL samples ... queue size = %s, %f" % (
             nsamples, dsamples_dev1.qsize(), time.time()-t
-        )
+        ))
         sys.stdout.flush()
     ditask.stop()
     del ditask
@@ -286,7 +308,7 @@ def digital_dev1(dsamples_dev1,go):
 
 def digital_dev4(dsamples_dev4, go):
     # Digital
-    print "\nCreating digital task."
+    print("\nCreating digital task.")
     ditask = Task()
     ditask.CreateDIChan(digital_input_dev4, '', DAQmx_Val_ChanPerLine)
     ditask.CfgSampClkTiming(
@@ -315,9 +337,9 @@ def digital_dev4(dsamples_dev4, go):
         )
         dsamples_dev4.put(ddata)
         #prof_d.write('%f\n' % (time.time()-t))
-        print "Read %s DIGITAL samples ... queue size = %s, %f" % (
+        print("Read %s DIGITAL samples ... queue size = %s, %f" % (
             nsamples, dsamples_dev4.qsize(), time.time()-t
-        )
+        ))
         sys.stdout.flush()
     ditask.stop()
     del ditask
@@ -326,7 +348,7 @@ def digital_dev4(dsamples_dev4, go):
 
 def digital_dev5(dsamples_dev5, go):
     # Digital
-    print "\nCreating digital task."
+    print("\nCreating digital task.")
     ditask = Task()
     ditask.CreateDIChan(digital_input_dev5, '', DAQmx_Val_ChanPerLine)
     ditask.CfgSampClkTiming(
@@ -355,9 +377,9 @@ def digital_dev5(dsamples_dev5, go):
         )
         dsamples_dev5.put(ddata)
         #prof_d.write('%f\n' % (time.time()-t))
-        print "Read %s DIGITAL samples ... queue size = %s, %f" % (
+        print("Read %s DIGITAL samples ... queue size = %s, %f" % (
             nsamples, dsamples_dev5.qsize(), time.time()-t
-        )
+        ))
         sys.stdout.flush()
     ditask.stop()
     del ditask
@@ -401,13 +423,11 @@ def ring_buffer(bf_queue, save_queue):
     bf_queue.task_done()
 
 
-def save_data(
-    save_queue,
-    cam_quartz_queue,
-    cam_ceramic_queue,
-    cam_polymer_queue
-):
+def save_data_type(save_type_queue, cam_type_queue):
     """
+
+    @param save_type_queue: queue
+    @param cam_queue: queue
 
     """
     # CONFIGURATION
@@ -428,27 +448,111 @@ def save_data(
         'polymer': analog_input_dev4.split(',')
     }
 
-    _CAM = {
-        'quartz': cam_quartz_queue,
-        'ceramic': cam_ceramic_queue,
-        'polymer': cam_polymer_queue
-    }
-
     acq = Acquisition(
         dsn, 'mswim', samples_to_save, samplerate, 1,
         sensors_settings, channels
     )
 
+    while True:
+        data = save_type_queue.get()
+        t = time.time()
+        try:
+            vehicle_image = {data.keys()[0]: cam_type_queue.get(timeout=1)}
+        except:
+            vehicle_image = {}
+
+        acq.save(data, vehicle_image)
+
+        # print('<<< Saved Data from %s' % str(data.keys()))
+        __PRINT(
+            'Save type qsize: %s; CAM type qsize %s; - in %s secs.' % (
+                save_type_queue.qsize(), cam_type_queue.qsize(), time.time()-t
+            )
+        )
+
+
+def save_hub(
+    save_queue, save_quartz_queue, save_ceramic_queue, save_polymer_queue
+):
+    """
+
+    @param save_queue:
+    @type save_queue:
+    @param save_quartz_queue:
+    @type save_quartz_queue:
+    @param save_ceramic_queue:
+    @type save_ceramic_queue:
+    @param save_polymer_queue:
+    @type save_polymer_queue:
+
+    """
+    _save_queues = {
+        'quartz': save_quartz_queue,
+        'ceramic': save_ceramic_queue,
+        'polymer': save_polymer_queue
+    }
+
     # LOOP PROCESS
     while True:
         data = save_queue.get()
-        vehicle_image = {k: _CAM[k].get() for k in data.keys()}
-        acq.save(data, vehicle_image)
-        print('<<< Saved Data from %s' % str(data.keys()))
+        for k, d in data.items():
+            _save_queues[k].put({k: d})
+
+        __PRINT('Save qsize: %s' % save_queue.qsize())
 
 
-def cam_trigger(
-    cam_event, cam_quartz_queue,
+def cam_send_trigger(cam_queue):
+    """
+
+    """
+    numRead = int32()
+    bytesPerSamp = int32()
+
+    tg_num_channels = 1
+    tg_samples_per_channel = 4
+
+    _param_smpclktm_di = {
+        'rate': 5000,
+        'activeEdge': DAQmx_Val_Rising,
+        'sampleMode': DAQmx_Val_ContSamps,
+        'sampsPerChan': nsamples*ndigital*10
+    }
+
+    ditask = Task()
+    ditask.CreateDIChan(
+        cam_input_trigger, '', DAQmx_Val_ChanPerLine
+    )
+    """
+    ditask.CfgSampClkTiming(
+        r'/Dev2/ai/SampleClock', **_param_smpclktm_di
+    )
+    """
+    ditask.CfgChangeDetectionTiming(
+        cam_input_trigger, '', DAQmx_Val_ContSamps,
+        tg_samples_per_channel * tg_num_channels
+    )
+    ditask.StartTask()
+
+    data = np.zeros((tg_num_channels*tg_samples_per_channel,), dtype=np.uint8)
+
+    cam = FXCamd102(CAM_HOST)
+
+    while True:
+        try:
+            ditask.ReadDigitalLines(
+                tg_samples_per_channel, 3.0,
+                DAQmx_Val_GroupByScanNumber,
+                data, tg_samples_per_channel*tg_num_channels,
+                byref(numRead), byref(bytesPerSamp), None
+            )
+            cam_queue.put(cam.send_trigger(wait=True))
+        except:
+            #time out
+            pass
+
+
+def cam_get_image(
+    cam_queue, cam_quartz_queue,
     cam_ceramic_queue, cam_polymer_queue
 ):
     """
@@ -456,30 +560,36 @@ def cam_trigger(
     """
     cam = FXCamd102(CAM_HOST)
     while True:
-        t = time.time()
-        cam_event.wait()
+        image_id = cam_queue.get()
 
-        image_id = cam.send_trigger(wait=True)
+        t = time.time()
+
         im = cam.image(image_id)
 
         cam_quartz_queue.put(im)
         cam_ceramic_queue.put(im)
         cam_polymer_queue.put(im)
-        cam_event.clear()
         print(
-            'CAM size %s : - Exec time: %f secs' %
-            (cam_quartz_queue.qsize(), time.time() - t)
+            'CAM size %s %s %s : - Exec time: %f secs' %
+            (
+                cam_quartz_queue.qsize(),
+                cam_ceramic_queue.qsize(),
+                cam_polymer_queue.qsize(),
+                time.time() - t)
         )
 
 if __name__ == '__main__':
     # EVENTS
     go = mp.Event()
-    cam_event = mp.Event()
 
     # QUEUES
     bf_queue = mp.Queue()
     save_queue = mp.Queue()
+    save_quartz_queue = mp.Queue()
+    save_ceramic_queue = mp.Queue()
+    save_polymer_queue = mp.Queue()
 
+    cam_queue = mp.Queue()
     cam_quartz_queue = mp.Queue()
     cam_ceramic_queue = mp.Queue()
     cam_polymer_queue = mp.Queue()
@@ -495,16 +605,49 @@ if __name__ == '__main__':
 
     # PROCESSES
     bf_proc = mp.Process(target=ring_buffer, args=(bf_queue, save_queue))
-    save_proc = mp.Process(
-        target=save_data,
+
+    save_hub_proc = mp.Process(
+        target=save_hub,
         args=(
-            save_queue, cam_quartz_queue, cam_ceramic_queue, cam_polymer_queue
+            save_queue, save_quartz_queue,
+            save_ceramic_queue, save_polymer_queue
         )
     )
-    cam_proc = mp.Process(
-        target=cam_trigger,
+
+    save_quartz_proc = []
+    save_ceramic_proc = []
+    save_polymer_proc = []
+
+    for _ in range(2):
+        p = mp.Process(
+            target=save_data_type, args=(save_quartz_queue, cam_quartz_queue)
+        )
+        p.daemon = True
+        p.start()
+        save_quartz_proc.append(p)
+
+        p = mp.Process(
+            target=save_data_type, args=(save_ceramic_queue, cam_ceramic_queue)
+        )
+        p.daemon = True
+        p.start()
+        save_ceramic_proc.append(p)
+
+        p = mp.Process(
+            target=save_data_type, args=(save_polymer_queue, cam_polymer_queue)
+        )
+        p.daemon = True
+        p.start()
+        save_polymer_proc.append(p)
+
+    cam_send_trigger_proc = mp.Process(
+        target=cam_send_trigger,
+        args=(cam_queue,)
+    )
+    cam_get_image_proc = mp.Process(
+        target=cam_get_image,
         args=(
-            cam_event, cam_quartz_queue,
+            cam_queue, cam_quartz_queue,
             cam_ceramic_queue, cam_polymer_queue
         )
     )
@@ -525,8 +668,14 @@ if __name__ == '__main__':
     )
 
     bf_proc.daemon = True
-    save_proc.daemon = True
-    cam_proc.daemon = True
+    save_hub_proc.daemon = True
+    #save_quartz_proc.daemon = True
+    #save_ceramic_proc.daemon = True
+    #save_polymer_proc.daemon = True
+
+
+    cam_send_trigger.daemon = True
+    cam_get_image.daemon = True
 
     analog_dev1_proc.daemon = True
     analog_dev2_proc.daemon = True
@@ -537,51 +686,44 @@ if __name__ == '__main__':
     digital_dev4_proc.daemon = True
     digital_dev5_proc.daemon = True
 
-    print "Starting Processes"
-
     digital_dev1_proc.start()
-    print "Digital Dev1 process PID = %s" % digital_dev1_proc.pid
-
     digital_dev4_proc.start()
-    print "Digital Dev4 process PID = %s" % digital_dev4_proc.pid
-
     digital_dev5_proc.start()
-    print "Digital Dev5 process PID = %s" % digital_dev5_proc.pid
-
     analog_dev1_proc.start()
-    print "Analog Dev1 process PID  = %s" % analog_dev1_proc.pid
-    
     analog_dev2_proc.start()
-    print "Analog Dev2 process PID  = %s" % analog_dev2_proc.pid
-    
     analog_dev4_proc.start()
-    print "Analog Dev4 process PID  = %s" % analog_dev4_proc.pid
-    
     analog_dev5_proc.start()
-    print "Analog Dev5 process PID  = %s" % analog_dev5_proc.pid
 
     # buffer process start
     bf_proc.start()
-    save_proc.start()
-    cam_proc.start()
+    save_hub_proc.start()
+    #save_quartz_proc.start()
+    #save_ceramic_proc.start()
+    #save_polymer_proc.start()
+    cam_send_trigger_proc.start()
+    cam_get_image_proc.start()
 
-    print "\nWriting files..."
+    if DEBUG:
+        print("Starting Processes")
+        print("Digital Dev1 process PID = %s" % digital_dev1_proc.pid)
+        print("Digital Dev4 process PID = %s" % digital_dev4_proc.pid)
+        print("Digital Dev5 process PID = %s" % digital_dev5_proc.pid)
+        print("Analog  Dev1 process PID = %s" % analog_dev1_proc.pid)
+        print("Analog  Dev2 process PID = %s" % analog_dev2_proc.pid)
+        print("Analog  Dev4 process PID = %s" % analog_dev4_proc.pid)
+        print("Analog  Dev5 process PID = %s" % analog_dev5_proc.pid)
+        #Syncronize reads in both threads
+        print("Sending sync signal")
+
     sys.stdout.flush()
-    
-    #Syncronize reads in both threads
-    print "Sending sync signal"
     go.set()
 
     while run:
         t = time.time()
 
-        dev1_digital_values = dsamples_dev1.get()
-        if not cam_event.is_set() and dev1_digital_values.any():
-            cam_event.set()
-
         bf_queue.put(
             ('Dev1',
-             np.concatenate((asamples_dev1.get(), dev1_digital_values)))
+             np.concatenate((asamples_dev1.get(), dsamples_dev1.get())))
         )
         bf_queue.put(('Dev2', asamples_dev2.get()))
         bf_queue.put(
@@ -593,12 +735,25 @@ if __name__ == '__main__':
              np.concatenate((asamples_dev5.get(), dsamples_dev5.get())))
         )
 
-        print(">>>> Read in %f secs." % (time.time()-t))
+        if DEBUG:
+            print(">>>> Read in %f secs." % (time.time()-t))
 
     analog_dev1_proc.join()
     analog_dev2_proc.join()
     analog_dev4_proc.join()
     analog_dev5_proc.join()
     digital_dev1_proc.join()
-    
-    print "Done!"
+    digital_dev4_proc.join()
+    digital_dev5_proc.join()
+
+    bf_proc.join()
+    save_hub_proc.join()
+    cam_send_trigger.join()
+    cam_get_image.join()
+
+    for i in range(2):
+        save_quartz_proc[i].join()
+        save_polymer_proc[i].join()
+        save_ceramic_proc[i].join()
+
+    print("Done!")

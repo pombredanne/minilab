@@ -149,7 +149,7 @@ class Acquisition(object):
 
 def save_acquisition_data(
     data={}, channels=[], sensors_settings={},
-    weight_data={}, dsn='', schema=''
+    weight_data={}, dsn='', schema='', vehicle_image=None
 ):
     """
     Save acquisition data from dictionary
@@ -212,6 +212,11 @@ def save_acquisition_data(
                 'sensor_type': type_acquisition[type_name],
                 'acquisition_type': 1  # TODO: change to a param value
             }
+
+            if type_name in vehicle_image:
+                acquisition_data['vehicle_image'] = (
+                    psycopg2.Binary(vehicle_image[type_name])
+                )
 
             num_channels = len(chans)
 

@@ -53,16 +53,18 @@ from PyDAQmx import *
 import numpy as np
 
 def DAQmxErrChk(error):
-    if error != 0:
+    if error < 0:
         raise Exception('DAQ ERROR')
 
 
 def main():
-    error = int32()
     taskHandle = TaskHandle()
     data = np.zeros((32, ),  dtype=np.uint8)
     numRead = int32()
     bytesPerSamp = int32()
+
+    num_channels = 1
+    samples_per_channel = 4
 
     # /*********************************************/
     # // DAQmx Configure Code
@@ -70,12 +72,13 @@ def main():
     DAQmxErrChk(DAQmxCreateTask("", byref(taskHandle)))
     DAQmxErrChk(
         DAQmxCreateDIChan(
-            taskHandle, "Dev1/port0/line0:7", "", DAQmx_Val_ChanPerLine)
+            taskHandle, "Dev4/port0/line0", "", DAQmx_Val_ChanPerLine)
     )
     DAQmxErrChk(
         DAQmxCfgChangeDetectionTiming(
-            taskHandle, "Dev1/port0/line0:7",
-            "Dev1/port0/line0:7", DAQmx_Val_ContSamps, 4)
+            taskHandle, "Dev1/port0/line0",
+            "Dev1/port0/line0", DAQmx_Val_ContSamps,
+            samples_per_channel * num_channels)
     )
 
     # /*********************************************/
@@ -89,12 +92,17 @@ def main():
         # /*********************************************/
         # // DAQmx Read Code
         # /*********************************************/
-        DAQmxErrChk(
-            DAQmxReadDigitalLines(
-                taskHandle, 4, 10.0, DAQmx_Val_GroupByScanNumber,
-                data, 32, byref(numRead), byref(bytesPerSamp), None)
-        )
-        print(data)
+        try:
+            DAQmxErrChk(
+                DAQmxReadDigitalLines(
+                    taskHandle, samples_per_channel, 10.0,
+                    DAQmx_Val_GroupByScanNumber,
+                    data, samples_per_channel*num_channels,
+                    byref(numRead), byref(bytesPerSamp), None)
+            )
+            print(data)
+        except:
+            print('Timeout.')
 
 if __name__ == '__main__':
     main()
