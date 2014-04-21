@@ -13,6 +13,11 @@ def home():
     return 'Worked!'
 
 
+@mod.route('/index')
+def home2():
+    return render_template('home/index.html',)
+
+
 @mod.route('/hello/')
 @mod.route('/hello/<name>')
 def hello(name=None):
@@ -55,6 +60,9 @@ def download():
 def result_client(name=None):
     return jsonify({'test': True})
 
+@mod.route('/image')
+def image():
+    return open('/tmp/flask.png').read()
 
 from flask.ext.admin import BaseView, expose
 
